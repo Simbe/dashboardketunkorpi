@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B1220">
+<title>Ketunkorven kotinäyttö</title>
+<link rel="icon" href="data:,">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* Everything is sized from --u, so the dashboard fills a 4:3 landscape
+     screen exactly (1 u = 10.24 px on a 1024 x 768 iPad). */
+  :root{
+    --bg:#0B1220;
+    --panel:#111B2E;
+    --panel-edge:#1C2A45;
+    --border:#223050;
+    --text:#EAF2FF;
+    --muted:#9DAFCF;
+    --muted-dim:#8497BA;
+    --amber:#F4A94A;
+    --teal:#4FD1C5;
+    --red:#E8646B;
+    --green:#5CCB8A;
+    --ice:#A9D4FF;
+    /* electricity price levels (also told in words, never colour alone) */
+    --p-cheap:#5CCB8A;
+    --p-normal:#8FA3C4;
+    --p-high:#F4A94A;
+    --p-vhigh:#E8646B;
+    --u: min(1vw, 1.3333vh);
+    --gap: calc(var(--u) * 1.1);
+    --radius: calc(var(--u) * 1.6);
+    --num: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+    /* type scale, a step bigger than the other dashboards
+       (18 / 21 / 24 / 28 / 32 / 37 px on the 1024 x 768 iPad) */
+    --fs-xs:  calc(var(--u) * 1.8);
+    --fs-s:   calc(var(--u) * 2.05);
+    --fs-m:   calc(var(--u) * 2.35);
+    --fs-l:   calc(var(--u) * 2.7);
+    --fs-xl:  calc(var(--u) * 3.1);
+    --fs-2xl: calc(var(--u) * 3.6);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .dash {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    height: 100vh;
+    width: 100vw;
+    padding: calc(var(--u) * 1.2) calc(var(--u) * 1.6) calc(var(--u) * 1.2);
+    background:
+      radial-gradient(ellipse at 15% 0%, rgba(79,209,197,0.07), transparent 55%),
+      radial-gradient(ellipse at 100% 100%, rgba(244,169,74,0.05), transparent 55%),
+      var(--bg);
+  }
+  .dash > * { position: relative; z-index: 1; }
+
+  .tint-layer {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: 0;
+    pointer-events: none;
+    transition: opacity 3s ease;
+  }
+  #nightTint {
+    background: radial-gradient(ellipse at 50% -10%, rgba(20,30,60,0.9), rgba(6,9,20,0.55) 70%);
+    opacity: 0;
+  }
+  #duskTint {
+    background: radial-gradient(ellipse at 15% 0%, rgba(244,169,74,0.22), transparent 60%);
+    opacity: 0;
+  }
+  /* 22-06: the whole screen dims */
+  .night-dim {
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: 1400;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 60s linear;
+  }
+
+  .num { font-family: var(--num); }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* WEATHER ICONS (inline SVG, duotone) */
+  .wi {
+    display: block;
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .wi-cloud { stroke: #AFC0DC; }
+  .wi-knock { fill: var(--panel); }
+  .wi-sun   { stroke: var(--amber); }
+  .wi-moon  { stroke: #C9D6EF; }
+  .wi-rain  { stroke: var(--teal); }
+  .wi-snow  { stroke: #DCE8FA; stroke-width: 2.6; }
+  .wi-flake { stroke-width: 1.7; }
+  .wi-fog   { stroke: #8FA3C4; }
+  .wi-bolt  { stroke: var(--amber); }
+
+  /* HEADER: date + week/daylight on the left, sun times + clock on the right */
+  .dash__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--u) * 2);
+    padding: 0 calc(var(--u) * 0.3) calc(var(--u) * 0.9);
+    border-bottom: 1px solid var(--border);
+  }
+  .hdr-left { min-width: 0; flex: 1 1 auto; }
+  .clock__date {
+    font-size: calc(var(--u) * 4.3);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+  }
+  .clock__weekday { color: var(--text); font-weight: 600; }
+  .clock__daymonth { color: var(--muted); font-weight: 500; }
+  .flag { display: inline-block; height: 0.62em; width: 1.02em; margin-left: 0.35em; vertical-align: 0.05em; border-radius: 2px; }
+  .hdr-sub {
+    font-size: var(--fs-m);
+    color: var(--muted);
+    margin-top: calc(var(--u) * 0.5);
+    white-space: nowrap;
+  }
+  .hdr-sub b { color: var(--text); font-weight: 600; }
+  .hdr-sub .sep { color: var(--muted-dim); margin: 0 0.45em; }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 3);
+    flex: 0 0 auto;
+  }
+  .sun-info {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--u) * 0.5);
+  }
+  .sun-info__item {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 0.7);
+    font-size: var(--fs-l);
+    font-weight: 500;
+    line-height: 1;
+    color: var(--muted);
+  }
+  .sun-info__icon { font-size: calc(var(--u) * 2.7); color: var(--amber); }
+  .sun-info__icon .wi { stroke: currentColor; }
+  .clock__time {
+    font-size: calc(var(--u) * 6.6);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .clock__sec {
+    font-size: 0.45em;
+    font-weight: 500;
+    color: var(--muted-dim);
+    margin-left: 0.12em;
+  }
+
+  /* WARNINGS (only when something is going on) */
+  /* all warnings share one row, so the screen below never gets squeezed more than this */
+  .alerts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-gap: var(--gap); }
+  .alerts:empty { display: none; }
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 1.6);
+    border-radius: var(--radius);
+    padding: calc(var(--u) * 0.9) calc(var(--u) * 1.8);
+    border: 1px solid;
+  }
+  .alert__icon { font-size: calc(var(--u) * 3.4); line-height: 1; flex: 0 0 auto; }
+  .alert__icon .wi { stroke: currentColor; }
+  .alert > div { min-width: 0; }
+  .alert__text { font-weight: 700; font-size: var(--fs-l); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alert__sub { font-size: var(--fs-s); color: var(--muted); margin-top: calc(var(--u) * 0.2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alert--lightning {
+    background: linear-gradient(90deg, rgba(232,100,107,0.2), rgba(244,169,74,0.14));
+    border-color: rgba(232,100,107,0.6);
+    animation: alertGlow 2.2s ease-in-out infinite;
+  }
+  .alert--lightning .alert__icon { color: var(--amber); }
+  .alert--slippery { background: rgba(244,169,74,0.13); border-color: rgba(244,169,74,0.55); }
+  .alert--slippery .alert__icon { color: var(--amber); }
+  .alert--snow { background: rgba(169,212,255,0.10); border-color: rgba(169,212,255,0.45); }
+  .alert--snow .alert__icon { color: var(--ice); }
+  @keyframes alertGlow {
+    0%, 100% { box-shadow: 0 0 0 rgba(232,100,107,0); }
+    50% { box-shadow: 0 0 20px rgba(232,100,107,0.5); }
+  }
+
+  /* BODY: radar | weather on top, electricity below (with radar)
+           weather | electricity side by side (without radar) */
+  .dash__body {
+    flex: 1 1 0;
+    min-height: 0;
+    display: grid;
+    grid-gap: var(--gap);
+  }
+  .dash--radar .dash__body {
+    grid-template-columns: 1.45fr 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "radar current" "elec elec";
+  }
+  .dash--noradar .dash__body {
+    grid-template-columns: 1fr 1.45fr;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "current elec";
+  }
+  .radar-panel { grid-area: radar; }
+  .current-panel { grid-area: current; }
+  .elec-panel { grid-area: elec; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* RADAR */
+  .radar-panel #map {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #0d1626;
+  }
+  .base-tiles { filter: brightness(1.25) contrast(0.92) saturate(1.1); }
+  .radar-frame { transition: opacity 0.35s ease; }
+  .label-tiles { filter: brightness(1.35) contrast(1.05); }
+  .map-vignette {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: 510;
+    pointer-events: none;
+    box-shadow: inset 0 0 70px rgba(7, 12, 24, 0.55);
+  }
+  .map-pill {
+    position: absolute;
+    left: calc(var(--u) * 1.2);
+    z-index: 520;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    background: rgba(11,18,32,0.68);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
+    border: 1px solid var(--panel-edge);
+    border-radius: calc(var(--u) * 0.9);
+    padding: calc(var(--u) * 0.45) calc(var(--u) * 1);
+    font-size: var(--fs-s);
+    color: var(--muted);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .radar-time { top: calc(var(--u) * 1.2); }
+  .radar-time b { color: var(--teal); font-weight: 600; margin-right: 0.3em; }
+  .lightning-pill { bottom: calc(var(--u) * 1.2); }
+  .lightning-pill .wi { width: 1em; height: 1em; }
+  .map-credit {
+    position: absolute;
+    right: calc(var(--u) * 0.8);
+    bottom: calc(var(--u) * 0.5);
+    z-index: 520;
+    font-size: calc(var(--u) * 1.1);
+    color: rgba(147, 166, 200, 0.55);
+    pointer-events: none;
+  }
+
+  /* CURRENT WEATHER */
+  .current-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: calc(var(--u) * 1.4) calc(var(--u) * 2.2);
+  }
+  .current__top { display: flex; align-items: center; gap: calc(var(--u) * 1.4); }
+  .current__icon { font-size: calc(var(--u) * 7.6); line-height: 1; flex: 0 0 auto; }
+  .current__temp {
+    font-size: calc(var(--u) * 10.2);
+    font-weight: 700;
+    line-height: 0.8;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+  }
+  .current__cond { font-size: var(--fs-l); font-weight: 600; line-height: 1.15; margin-top: calc(var(--u) * 0.6); }
+  .current__feels { font-size: var(--fs-m); color: var(--muted); margin-top: calc(var(--u) * 0.25); }
+  .current__feels span { color: var(--text); font-weight: 700; }
+  .current__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: calc(var(--u) * 1) calc(var(--u) * 2);
+    margin-top: calc(var(--u) * 1);
+  }
+  .stat { display: flex; flex-direction: column; gap: calc(var(--u) * 0.15); min-width: 0; }
+  .stat__label { font-size: var(--fs-s); font-weight: 500; color: var(--muted-dim); }
+  .stat__value { font-size: var(--fs-xl); font-weight: 600; line-height: 1.05; white-space: nowrap; }
+  .unit { font-size: 0.6em; font-weight: 500; color: var(--muted); margin-left: 0.15em; }
+  .unit--tight { margin-left: 0.02em; }
+  .wind-arrow {
+    display: inline-block;
+    font-style: normal;
+    color: var(--muted);
+    margin-left: 0.35em;
+    font-size: 0.6em;
+    vertical-align: 0.1em;
+  }
+  .wind-dir { font-size: 0.6em; font-weight: 500; color: var(--muted); margin-left: 0.1em; }
+  .stale-note {
+    font-size: var(--fs-s);
+    color: var(--amber);
+    margin-top: calc(var(--u) * 0.8);
+  }
+  .stale-note[hidden] { display: none; }
+  /* short panel (a warning is showing, or a smaller screen): drop bits step by step */
+  .dash--noradar .current__temp { font-size: calc(var(--u) * 12.5); }
+  .dash--noradar .current__icon { font-size: calc(var(--u) * 9); }
+  .dash--noradar .current__cond { font-size: var(--fs-xl); margin-top: calc(var(--u) * 1); }
+  .dash--noradar .current__feels { font-size: var(--fs-l); }
+  .current-panel.compact-1 .current__temp { font-size: calc(var(--u) * 8.4); }
+  .current-panel.compact-1 .current__icon { font-size: calc(var(--u) * 6.4); }
+  .current-panel.compact-2 .stat--minor { display: none; }
+  .current-panel.compact-3 .current__grid { display: none; }
+
+  /* ELECTRICITY */
+  .elec-panel {
+    display: grid;
+    padding: calc(var(--u) * 1.3) calc(var(--u) * 2);
+    grid-gap: calc(var(--u) * 1.2) calc(var(--u) * 2.6);
+  }
+  .dash--radar .elec-panel {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "now chart facts";
+    height: calc(var(--u) * 19.5);
+  }
+  .dash--noradar .elec-panel {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "now facts" "chart chart" "legend legend";
+  }
+  .elec-now { grid-area: now; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .elec-chart { grid-area: chart; min-width: 0; min-height: 0; }
+  .elec-facts { grid-area: facts; display: flex; flex-direction: column; justify-content: center; gap: calc(var(--u) * 0.9); min-width: 0; }
+  .elec-legend { grid-area: legend; display: none; }
+  .dash--noradar .elec-legend { display: flex; }
+  .dash--noradar .elec-panel.is-error .elec-legend { display: none; }
+  .dash--noradar .elec-facts { justify-content: flex-start; padding-top: calc(var(--u) * 0.4); }
+  .dash--noradar .elec-now { justify-content: flex-start; }
+
+  .elec-now__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; }
+  .elec-now__price {
+    font-family: var(--num);
+    font-size: calc(var(--u) * 7.2);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    margin-top: calc(var(--u) * 0.3);
+  }
+  .elec-now__price .unit { font-size: 0.32em; letter-spacing: 0; margin-left: 0.25em; }
+  .level {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-top: calc(var(--u) * 0.6);
+    font-size: var(--fs-m);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .level i { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; background: var(--p-normal); }
+  .level--cheap i { background: var(--p-cheap); }
+  .level--high i { background: var(--p-high); }
+  .level--vhigh i { background: var(--p-vhigh); }
+  .elec-now__note { font-size: var(--fs-xs); color: var(--muted-dim); margin-top: calc(var(--u) * 0.4); white-space: nowrap; }
+
+  .fact__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .fact__value { font-size: var(--fs-xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
+  .fact__value .unit { font-family: 'Inter', sans-serif; }
+  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-s); color: var(--muted); font-weight: 500; margin-left: 0.5em; }
+  .fact__label .mark-best {
+    display: inline-block;
+    width: 1.2em;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--text);
+    vertical-align: 0.25em;
+    margin-left: 0.4em;
+  }
+  .dash--noradar .elec-facts { flex-direction: row; justify-content: space-between; flex-wrap: wrap; gap: calc(var(--u) * 1) calc(var(--u) * 2.4); }
+
+  /* the bar chart: today (and tomorrow from about 14:00) */
+  .chart { display: flex; gap: calc(var(--u) * 1.6); height: 100%; }
+  .cg { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+  .cg__label { font-size: var(--fs-xs); color: var(--muted); font-weight: 500; white-space: nowrap; line-height: calc(var(--fs-s) * 1.2); }
+  .cg__label b { color: var(--text); font-weight: 600; font-size: var(--fs-s); margin-right: 0.35em; }
+  /* y axis: price steps, left of the bars */
+  .yax { flex: 0 0 auto; display: flex; flex-direction: column; margin-right: calc(var(--u) * -0.8); }
+  .yax .cg__label { visibility: hidden; }
+  .yax__scale { flex: 1 1 0; position: relative; margin-top: calc(var(--u) * 0.6); min-width: 1.4em; font-size: var(--fs-xs); }
+  .yax__scale span { position: absolute; right: 0; transform: translateY(50%); color: var(--muted-dim); line-height: 1; font-family: var(--num); }
+  .cg__bars {
+    flex: 1 1 0;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    margin-top: calc(var(--u) * 0.6);
+    border-bottom: 1px solid var(--border);
+  }
+  .cg__grid {
+    position: absolute;
+    left: 0; right: 0;
+    border-top: 1px dashed rgba(157,175,207,0.22);
+    pointer-events: none;
+  }
+  .b { flex: 1 1 0; height: 100%; position: relative; display: flex; align-items: flex-end; padding: 0 1px; }
+  .b i {
+    display: block;
+    width: 100%;
+    min-height: 2px;
+    border-radius: 3px 3px 0 0;
+    background: var(--p-normal);
+  }
+  .b--cheap i { background: var(--p-cheap); }
+  .b--high i { background: var(--p-high); }
+  .b--vhigh i { background: var(--p-vhigh); }
+  .b.is-past i { opacity: 0.32; }
+  .b.is-now i { box-shadow: 0 0 0 2px var(--text); }
+  /* cheapest 3 h: a white line under the bars */
+  .best-line {
+    position: absolute;
+    bottom: calc(var(--u) * -1.1);
+    height: 4px;
+    border-radius: 2px;
+    background: var(--text);
+  }
+  .cg__axis { position: relative; height: calc(var(--fs-xs) * 1.2); margin-top: calc(var(--u) * 1.4); }
+  .cg__axis span {
+    position: absolute;
+    top: 0;
+    font-size: var(--fs-xs);
+    color: var(--muted-dim);
+    line-height: 1;
+    transform: translateX(-50%);
+  }
+  .cg__axis span:first-child { transform: none; }
+  .cg__wait {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: var(--fs-s);
+    color: var(--muted-dim);
+    border: 1px dashed var(--border);
+    border-radius: calc(var(--u) * 1);
+    margin-top: calc(var(--u) * 0.6);
+    padding: 0 calc(var(--u) * 1);
+  }
+  .elec-error {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    font-size: var(--fs-m);
+    color: var(--amber);
+  }
+  .elec-legend { gap: calc(var(--u) * 2.2); font-size: var(--fs-xs); color: var(--muted); align-items: center; }
+  .elec-legend span { display: inline-flex; align-items: center; gap: 0.45em; white-space: nowrap; }
+  .elec-legend i { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 3px; }
+
+  /* FORECAST STRIPS */
+  .forecast {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    grid-gap: var(--gap);
+  }
+  .strip {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: var(--radius);
+    display: flex;
+    gap: calc(var(--u) * 0.3);
+    padding: calc(var(--u) * 0.5);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .strip-item {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--u) * 0.5) 0 calc(var(--u) * 0.6);
+    border-radius: calc(var(--u) * 1.1);
+  }
+  .strip-item.is-now {
+    background: rgba(255,255,255,0.045);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .strip-item__label { font-size: var(--fs-s); font-weight: 500; color: var(--muted); white-space: nowrap; }
+  .is-now .strip-item__label { color: var(--text); font-weight: 600; }
+  .strip-item__icon { font-size: calc(var(--u) * 3.6); margin: calc(var(--u) * 0.3) 0 calc(var(--u) * 0.2); }
+  .strip-item__temp {
+    font-family: var(--num);
+    font-size: var(--fs-xl);
+    letter-spacing: -0.01em;
+    font-weight: 600;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+  .strip-item__min { font-family: var(--num); font-size: var(--fs-m); color: var(--muted-dim); font-weight: 500; line-height: 1.1; white-space: nowrap; }
+  .strip-item__pop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--u) * 0.25);
+    margin-top: calc(var(--u) * 0.3);
+    width: 100%;
+  }
+  .pop-num {
+    font-family: var(--num);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    color: var(--teal);
+    line-height: 1;
+    min-height: var(--fs-xs);
+  }
+  .pop-bar {
+    width: 56%;
+    height: calc(var(--u) * 0.4);
+    border-radius: 2px;
+    background: rgba(79, 209, 197, 0.14);
+    overflow: hidden;
+  }
+  .pop-bar i { display: block; height: 100%; background: var(--teal); border-radius: 2px; }
+
+  .is-tight .strip-item__pop { display: none; }
+  .is-tight .strip-item__icon { font-size: calc(var(--u) * 3); margin: calc(var(--u) * 0.15) 0; }
+
+  /* version note (long press on the clock) */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--u) * 3);
+    transform: translateX(-50%);
+    z-index: 1500;
+    background: rgba(11,18,32,0.92);
+    border: 1px solid var(--panel-edge);
+    border-radius: calc(var(--u) * 1);
+    padding: calc(var(--u) * 0.8) calc(var(--u) * 1.6);
+    font-size: var(--fs-s);
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .toast[hidden] { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .alert--lightning { animation: none; }
+    .tint-layer, .radar-frame, .night-dim { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="dash dash--radar" id="dash">
+  <div class="tint-layer" id="nightTint"></div>
+  <div class="tint-layer" id="duskTint"></div>
+
+  <header class="dash__header">
+    <div class="hdr-left">
+      <div class="clock__date num" id="clockDate">&mdash;</div>
+      <div class="hdr-sub" id="hdrSub">&nbsp;</div>
+    </div>
+    <div class="header-right">
+      <div class="sun-info">
+        <span class="sun-info__item" title="Aurinko nousee">
+          <span class="sun-info__icon"><svg class="wi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18M6.5 19a5.5 5.5 0 0 1 11 0M12 3v6M9.3 5.6 12 3l2.7 2.6M3.8 12.6l1.5 1.1M20.2 12.6l-1.5 1.1"/></svg></span>
+          <span class="num tnum" id="headerSunrise">--:--</span>
+        </span>
+        <span class="sun-info__item" title="Aurinko laskee">
+          <span class="sun-info__icon"><svg class="wi" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18M6.5 19a5.5 5.5 0 0 1 11 0M12 3v6M9.3 6.4 12 9l2.7-2.6M3.8 12.6l1.5 1.1M20.2 12.6l-1.5 1.1"/></svg></span>
+          <span class="num tnum" id="headerSunset">--:--</span>
+        </span>
+      </div>
+      <div class="clock__time num tnum" id="clockTime">--:--</div>
+    </div>
+  </header>
+
+  <div class="alerts" id="alerts"></div>
+
+  <main class="dash__body">
+    <section class="panel radar-panel" id="radarPanel">
+      <div id="map"></div>
+      <div class="map-vignette"></div>
+      <div class="map-credit">Esri · Ilmatieteen laitos</div>
+      <div class="map-pill radar-time num tnum" id="radarTime">Sadetutka latautuu&hellip;</div>
+      <div class="map-pill lightning-pill num" id="lightningCount"></div>
+    </section>
+
+    <section class="panel current-panel">
+      <div>
+        <div class="current__top">
+          <div class="current__icon" id="curIcon"><svg class="wi" viewBox="-1 -1 26 26"><path class="wi-cloud" d="M18 10h-1.26A8 8 0 1 0 9 20h9a4 4 0 0 0 0-8z"/></svg></div>
+          <div class="current__temp num" id="curTemp">--&deg;</div>
+        </div>
+        <div class="current__cond" id="curCond">Säätiedot latautuvat&hellip;</div>
+        <div class="current__feels">Tuntuu kuin <span class="num" id="curFeels">--&deg;</span></div>
+      </div>
+      <div>
+        <div class="current__grid">
+          <div class="stat"><span class="stat__label">Tuuli</span><span class="stat__value num" id="curWind">&ndash;</span></div>
+          <div class="stat"><span class="stat__label">Puuskat</span><span class="stat__value num" id="curGust">&ndash;</span></div>
+          <div class="stat stat--minor"><span class="stat__label">Kosteus</span><span class="stat__value num" id="curHumidity">&ndash;</span></div>
+          <div class="stat stat--minor"><span class="stat__label">Ilmanpaine</span><span class="stat__value num" id="curPressure">&ndash;</span></div>
+        </div>
+        <div class="stale-note" id="staleNote" hidden>Säätiedot eivät päivity. Yritetään uudelleen.</div>
+      </div>
+    </section>
+
+    <section class="panel elec-panel" aria-label="Sähkön hinta">
+      <div class="elec-now">
+        <div class="elec-now__label">Sähkö nyt</div>
+        <div class="elec-now__price" id="priceNow">&ndash;</div>
+        <div class="level" id="priceLevel"></div>
+        <div class="elec-now__note" id="priceNote"></div>
+      </div>
+      <div class="elec-chart" id="priceChart"><div class="elec-error">Sähkön hinnat latautuvat&hellip;</div></div>
+      <div class="elec-facts" id="priceFacts"></div>
+      <div class="elec-legend" aria-hidden="true">
+        <span><i style="background:var(--p-cheap)"></i>alle 5 snt</span>
+        <span><i style="background:var(--p-normal)"></i>5&ndash;10 snt</span>
+        <span><i style="background:var(--p-high)"></i>10&ndash;20 snt</span>
+        <span><i style="background:var(--p-vhigh)"></i>yli 20 snt</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="forecast">
+    <section class="strip hourly" id="hourlyStrip" aria-label="Seuraavat tunnit"></section>
+    <section class="strip daily" id="dailyStrip" aria-label="Seuraavat päivät"></section>
+  </div>
+  <!-- Tiedot: Ilmatieteen laitos (CC BY 4.0), Open-Meteo, spot-hinta.fi, Esri (kartta) -->
+</div>
+
+<div class="night-dim" id="nightDim"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(function(){
+
+  /* ================= SETTINGS ================= */
+  var VERSION = '1.1';
+  // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
+  // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
+  var SHOW_RADAR = true;
+  // Ketunkorven alue noin kilometrin tarkkuudella (ei talon tarkka paikka)
+  var LAT = 60.34;
+  var LON = 24.71;
+  var PLACE_NAME = 'Ketunkorpi';
+  // Sähkösopimuksen marginaali + siirtomaksu, snt/kWh sis. alv. 0 = näytetään
+  // pelkkä pörssihinta. Esim. 0.49 + 4.5 -> PRICE_EXTRA_CENTS = 4.99
+  var PRICE_EXTRA_CENTS = 0;
+  var PRICE_CHEAP = 5, PRICE_HIGH = 10, PRICE_VHIGH = 20;   // snt/kWh: värien rajat
+  var NIGHT_FROM = 22, NIGHT_TO = 6, NIGHT_DIM = 0.4;   // yöhimmennys
+  /* ============================================ */
+
+  if (/[?&]tutka=0/.test(location.search)) SHOW_RADAR = false;
+  if (/[?&]tutka=1/.test(location.search)) SHOW_RADAR = true;
+  var dashEl = document.getElementById('dash');
+  if (!SHOW_RADAR) {
+    dashEl.className = 'dash dash--noradar';
+    var rp = document.getElementById('radarPanel');
+    rp.parentNode.removeChild(rp);
+  }
+
+  /* ---------- Inline SVG weather icons ---------- */
+  var WI_CLOUD = 'M18 10h-1.26A8 8 0 1 0 9 20h9a4 4 0 0 0 0-8z';
+  var WI_CLOUD_HI = 'M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25';
+  var WI_BOLT_CLOUD = 'M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9';
+  var ZAP_MINI = '<svg class="wi" viewBox="-1 -1 26 26"><polygon class="wi-bolt" points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+
+  function svgIcon(kind){
+    var s = '<svg class="wi" viewBox="-1 -1 26 26" aria-hidden="true">';
+    var cloudHi = '<path class="wi-cloud" d="' + WI_CLOUD_HI + '"/>';
+    var knockCloud = '<g transform="translate(2.6,2.4) scale(0.92)"><path class="wi-cloud wi-knock" d="' + WI_CLOUD + '"/></g>';
+    switch (kind){
+      case 'clear-day':
+        s += '<circle class="wi-sun" cx="12" cy="12" r="4.4"/>' +
+             '<path class="wi-sun" d="M12 1.5v2M12 20.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M1.5 12h2M20.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"/>';
+        break;
+      case 'clear-night':
+        s += '<path class="wi-moon" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        break;
+      case 'part-day':
+        s += '<circle class="wi-sun" cx="6.2" cy="5.8" r="2.4"/>' +
+             '<path class="wi-sun" d="M6.2 1.2v1.4M1.6 5.8h1.4M2.7 2.3l1 1M9.7 2.3l-1 1"/>' + knockCloud;
+        break;
+      case 'part-night':
+        s += '<path class="wi-moon" d="M9.5 5.8A4.05 4.05 0 1 1 5.05 1.35a3.15 3.15 0 0 0 4.45 4.45z"/>' + knockCloud;
+        break;
+      case 'cloud':
+        s += '<path class="wi-cloud" d="' + WI_CLOUD + '"/>';
+        break;
+      case 'fog':
+        s += cloudHi + '<path class="wi-fog" d="M5.5 17h13M8 21h9"/>';
+        break;
+      case 'drizzle':
+        s += cloudHi + '<path class="wi-rain" d="M8 13v2M8 19v2M16 13v2M16 19v2M12 15v2M12 21v2"/>';
+        break;
+      case 'rain':
+        s += cloudHi + '<path class="wi-rain" d="M16 13v8M8 13v8M12 15v8"/>';
+        break;
+      case 'snow':
+        s += cloudHi + '<path class="wi-snow wi-flake" d="M8 14.2v4.8M5.92 15.4l4.16 2.4M5.92 17.8l4.16 -2.4M16 14.2v4.8M13.92 15.4l4.16 2.4M13.92 17.8l4.16 -2.4M12 19v4.8M9.92 20.2l4.16 2.4M9.92 22.6l4.16 -2.4"/>';
+        break;
+      case 'sleet':
+        s += cloudHi + '<path class="wi-rain" d="M8 13v6M16 13v6"/>' +
+             '<path class="wi-snow" d="M12 17h.01M12 21h.01"/>';
+        break;
+      case 'thunder':
+        s += '<path class="wi-cloud" d="' + WI_BOLT_CLOUD + '"/>' +
+             '<polyline class="wi-bolt" points="13 11 9 17 15 17 11 23"/>';
+        break;
+      default:
+        s += '<path class="wi-cloud" d="' + WI_CLOUD + '"/>';
+    }
+    return s + '</svg>';
+  }
+  var ICON_SLIPPERY = '<svg class="wi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 9.5v5M12 17.4h.01"/></svg>';
+  var ICON_SNOW = '<svg class="wi" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5"/></svg>';
+
+  function nightify(kind, day){
+    if (day) return kind;
+    if (kind === 'clear-day') return 'clear-night';
+    if (kind === 'part-day') return 'part-night';
+    return kind;
+  }
+
+  /* ---------- Helsinki time helpers ---------- */
+  function helsinkiDateKey(d){
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  }
+  function helsinkiHour(d){
+    return parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Helsinki', hour: '2-digit', hour12: false }).format(d), 10) % 24;
+  }
+  function helsinkiMidnight(){
+    var now = new Date();
+    var p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Helsinki', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now).split(':');
+    var h = parseInt(p[0], 10) % 24, m = parseInt(p[1], 10), s = parseInt(p[2], 10);
+    return new Date(now.getTime() - ((h * 60 + m) * 60 + s) * 1000 - now.getMilliseconds());
+  }
+  function tomorrowKey(){
+    return helsinkiDateKey(new Date(helsinkiMidnight().getTime() + 36 * 60 * 60 * 1000));
+  }
+  function fmtTime(d){
+    return d.toLocaleTimeString('en-GB', { timeZone:'Europe/Helsinki', hour:'2-digit', minute:'2-digit' });
+  }
+  function fmtDec(v){ return v.toFixed(1).replace('.', ',').replace('-', '−'); }
+
+  var lastSunrise = null, lastSunset = null;
+  function isDayAt(d){
+    if (!lastSunrise || !lastSunset) return true;
+    function mins(x){
+      var p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Helsinki', hour: '2-digit', minute: '2-digit', hour12: false }).format(x).split(':');
+      return (parseInt(p[0], 10) % 24) * 60 + parseInt(p[1], 10);
+    }
+    var m = mins(d);
+    return m >= mins(new Date(lastSunrise)) && m <= mins(new Date(lastSunset));
+  }
+
+  function popMarkup(pop){
+    if (pop === null || typeof pop !== 'number' || isNaN(pop)) return '<div class="strip-item__pop"></div>';
+    var p = Math.max(0, Math.min(100, Math.round(pop)));
+    var num = p >= 30 ? p + '%' : '';
+    var fillOpacity = (0.35 + 0.65 * p / 100).toFixed(2);
+    var hide = p < 10 ? ' style="visibility:hidden"' : '';
+    return '<div class="strip-item__pop">' +
+      '<span class="pop-num">' + num + '</span>' +
+      '<span class="pop-bar"' + hide + '><i style="width:' + p + '%;opacity:' + fillOpacity + '"></i></span>' +
+      '</div>';
+  }
+
+  function withUnit(v, unit){
+    if (typeof v !== 'number' || isNaN(v)) return '&ndash;';
+    return Math.round(v) + '<span class="unit' + (unit === '%' ? ' unit--tight' : '') + '">' + unit + '</span>';
+  }
+
+  function degToCardinal(deg){
+    var dirs = ['P','KO','I','KA','E','LO','L','LU'];
+    return dirs[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+  }
+
+  function wmoInfo(code, isDay){
+    var day = isDay !== 0;
+    var map = {
+      0:  [day ? 'clear-day' : 'clear-night', 'Selkeää'],
+      1:  [day ? 'part-day' : 'part-night', 'Melko selkeää'],
+      2:  [day ? 'part-day' : 'part-night', 'Puolipilvistä'],
+      3:  ['cloud', 'Pilvistä'],
+      45: ['fog', 'Sumua'],
+      48: ['fog', 'Jäätävää sumua'],
+      51: ['drizzle', 'Heikkoa tihkua'],
+      53: ['drizzle', 'Tihkusadetta'],
+      55: ['rain', 'Voimakasta tihkua'],
+      56: ['sleet', 'Jäätävää tihkua'],
+      57: ['sleet', 'Jäätävää tihkua'],
+      61: ['rain', 'Heikkoa sadetta'],
+      63: ['rain', 'Sadetta'],
+      65: ['rain', 'Rankkaa sadetta'],
+      66: ['sleet', 'Jäätävää sadetta'],
+      67: ['sleet', 'Jäätävää sadetta'],
+      71: ['snow', 'Heikkoa lumisadetta'],
+      73: ['snow', 'Lumisadetta'],
+      75: ['snow', 'Kovaa lumisadetta'],
+      77: ['snow', 'Hienoa lumisadetta'],
+      80: ['drizzle', 'Heikkoja kuuroja'],
+      81: ['rain', 'Sadekuuroja'],
+      82: ['rain', 'Rankkoja kuuroja'],
+      85: ['snow', 'Lumikuuroja'],
+      86: ['snow', 'Kovia lumikuuroja'],
+      95: ['thunder', 'Ukkosta'],
+      96: ['thunder', 'Ukkosta ja rakeita'],
+      99: ['thunder', 'Ukkosta ja rakeita']
+    };
+    if (map[code]) return map[code];
+    return ['cloud', '—'];
+  }
+
+  /* ---------- Flag days ---------- */
+  var FLAG_DAYS = {
+    '02-05': 'J. L. Runebergin päivä', '02-28': 'Kalevalan päivä',
+    '03-19': 'Minna Canthin päivä, tasa-arvon päivä', '04-09': 'Mikael Agricolan päivä, suomen kielen päivä',
+    '04-27': 'Kansallinen veteraanipäivä', '05-01': 'Vappu, suomalaisen työn päivä', '05-09': 'Eurooppa-päivä',
+    '05-12': 'J. V. Snellmanin päivä, suomalaisuuden päivä', '06-04': 'Puolustusvoimain lippujuhlan päivä',
+    '07-06': 'Eino Leinon päivä, runon ja suven päivä', '10-01': 'Miina Sillanpään ja kansalaisvaikuttamisen päivä',
+    '10-10': 'Aleksis Kiven päivä, suomalaisen kirjallisuuden päivä', '10-24': 'YK:n päivä',
+    '11-06': 'Ruotsalaisuuden päivä', '11-20': 'Lapsen oikeuksien päivä', '12-06': 'Itsenäisyyspäivä',
+    '12-08': 'Jean Sibeliuksen päivä, suomalaisen musiikin päivä'
+  };
+  function nthWeekday(y, m, wd, n){
+    if (n > 0){
+      var first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+      return 1 + ((wd - first + 7) % 7) + (n - 1) * 7;
+    }
+    var lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    var lastWd = new Date(Date.UTC(y, m - 1, lastDay)).getUTCDay();
+    return lastDay - ((lastWd - wd + 7) % 7);
+  }
+  function flagDay(){
+    var parts = helsinkiDateKey(new Date()).split('-');
+    var y = +parts[0], m = +parts[1], d = +parts[2];
+    var fixed = FLAG_DAYS[parts[1] + '-' + parts[2]];
+    if (fixed) return fixed;
+    if (m === 5 && d === nthWeekday(y, 5, 0, 2)) return 'Äitienpäivä';
+    if (m === 5 && d === nthWeekday(y, 5, 0, 3)) return 'Kaatuneitten muistopäivä';
+    if (m === 6 && d >= 20 && d <= 26 && new Date(Date.UTC(y, 5, d)).getUTCDay() === 6) return 'Juhannuspäivä, Suomen lipun päivä';
+    if (m === 8 && d === nthWeekday(y, 8, 6, -1)) return 'Suomen luonnon päivä';
+    if (m === 11 && d === nthWeekday(y, 11, 0, 2)) return 'Isänpäivä';
+    return '';
+  }
+  var FLAG_SVG = '<svg class="flag" viewBox="0 0 18 11" aria-hidden="true"><rect width="18" height="11" fill="#fff"/><rect x="5" width="3" height="11" fill="#1F4FA3"/><rect y="4" width="18" height="3" fill="#1F4FA3"/></svg>';
+
+  // ISO week number of today's Helsinki date
+  function isoWeek(){
+    var p = helsinkiDateKey(new Date()).split('-');
+    var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    var wd = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - wd);
+    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  }
+
+  /* ---------- Header: clock, date, week, daylight ---------- */
+  var dayLengthHtml = '';
+  function renderSub(){
+    var html = 'Viikko <b>' + isoWeek() + '</b>';
+    if (dayLengthHtml) html += '<span class="sep">·</span>' + dayLengthHtml;
+    var el = document.getElementById('hdrSub');
+    if (el.innerHTML !== html) { el.innerHTML = html; fitHeader(); }
+  }
+  function tickClock(){
+    var now = new Date();
+    var p = now.toLocaleTimeString('en-GB', { timeZone:'Europe/Helsinki', hour:'2-digit', minute:'2-digit', second:'2-digit' }).split(':');
+    var weekday = now.toLocaleDateString('fi-FI', { timeZone:'Europe/Helsinki', weekday:'long' });
+    weekday = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+    var dayMonth = now.toLocaleDateString('fi-FI', { timeZone:'Europe/Helsinki', day:'numeric', month:'long' });
+    document.getElementById('clockTime').innerHTML = p[0] + ':' + p[1] + '<span class="clock__sec">' + p[2] + '</span>';
+    var flag = flagDay();
+    var html = '<span class="clock__weekday">' + weekday + '</span> <span class="clock__daymonth">' + dayMonth + '</span>' + (flag ? FLAG_SVG : '');
+    var dateEl = document.getElementById('clockDate');
+    if (dateEl.innerHTML !== html) {
+      dateEl.innerHTML = html;
+      dateEl.title = flag;
+      renderSub();
+      fitHeader();
+    }
+    updateNight(parseInt(p[0], 10) % 24);
+  }
+  // the date and the line under it must never run into the sun times
+  function fitHeader(){
+    var left = document.querySelector('.hdr-left');
+    var els = [document.getElementById('clockDate'), document.getElementById('hdrSub')];
+    for (var i = 0; i < els.length; i++){
+      var d = els[i];
+      d.style.fontSize = '';
+      var size = parseFloat(window.getComputedStyle(d).fontSize), guard = 20;
+      while (d.scrollWidth > left.clientWidth + 1 && guard-- > 0){
+        size *= 0.95;
+        d.style.fontSize = size.toFixed(1) + 'px';
+      }
+    }
+  }
+
+  // night dim 22-06
+  function updateNight(h){
+    var night = NIGHT_FROM > NIGHT_TO ? (h >= NIGHT_FROM || h < NIGHT_TO) : (h >= NIGHT_FROM && h < NIGHT_TO);
+    var dim = document.getElementById('nightDim');
+    var want = night ? String(NIGHT_DIM) : '0';
+    if (dim.style.opacity === want) return;
+    if (!dim.getAttribute('data-ready')) {
+      dim.style.transition = 'none';
+      dim.style.opacity = want;
+      dim.offsetWidth;
+      dim.style.transition = '';
+      dim.setAttribute('data-ready', '1');
+    } else {
+      dim.style.opacity = want;
+    }
+  }
+
+  tickClock();
+  setInterval(tickClock, 1000);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHeader);
+  window.addEventListener('resize', fitHeader);
+
+  // long press on the clock: shows the version
+  (function(){
+    var clock = document.getElementById('clockTime'), timer = null, hideTimer = null;
+    function cancel(){ clearTimeout(timer); }
+    clock.addEventListener('pointerdown', function(){
+      cancel();
+      timer = setTimeout(function(){
+        var t = document.getElementById('toast');
+        t.textContent = 'Ketunkorven kotinäyttö · versio ' + VERSION;
+        t.hidden = false;
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(function(){ t.hidden = true; }, 5000);
+      }, 1200);
+    });
+    clock.addEventListener('pointerup', cancel);
+    clock.addEventListener('pointerleave', cancel);
+    clock.addEventListener('pointercancel', cancel);
+  })();
+
+  /* ---------- FMI helpers ---------- */
+  function isoNoMillis(d){ return d.toISOString().replace(/\.\d+Z$/, 'Z'); }
+  var FMI_WFS_URL = 'https://opendata.fmi.fi/wfs';
+  function buildFmiUrl(storedQueryId, extraParams){
+    var url = FMI_WFS_URL + '?service=WFS&version=2.0.0&request=getFeature&storedquery_id=' + encodeURIComponent(storedQueryId);
+    for (var key in extraParams){
+      if (extraParams.hasOwnProperty(key)) url += '&' + key + '=' + encodeURIComponent(extraParams[key]);
+    }
+    return url;
+  }
+  function fetchFmiXml(url){
+    return fetch(url).then(function(r){
+      if (!r.ok) throw new Error('FMI HTTP ' + r.status);
+      return r.text();
+    }).then(function(text){
+      var doc = new DOMParser().parseFromString(text, 'text/xml');
+      if (doc.getElementsByTagName('parsererror').length ||
+          doc.getElementsByTagName('ExceptionReport').length ||
+          doc.getElementsByTagName('ows:ExceptionReport').length) throw new Error('FMI exception');
+      return doc;
+    });
+  }
+  function parseBsWfsElements(doc){
+    var elements = doc.getElementsByTagName('BsWfs:BsWfsElement');
+    var rows = [];
+    for (var i = 0; i < elements.length; i++){
+      var el = elements[i];
+      var timeEl = el.getElementsByTagName('BsWfs:Time')[0];
+      var posEl = el.getElementsByTagName('gml:pos')[0];
+      var nameEl = el.getElementsByTagName('BsWfs:ParameterName')[0];
+      var valEl = el.getElementsByTagName('BsWfs:ParameterValue')[0];
+      if (!timeEl || !nameEl || !valEl) continue;
+      var lat = null, lon = null;
+      if (posEl) {
+        var parts = posEl.textContent.trim().split(/\s+/);
+        lat = parseFloat(parts[0]);
+        lon = parseFloat(parts[1]);
+      }
+      rows.push({ time: timeEl.textContent, lat: lat, lon: lon, name: nameEl.textContent, value: parseFloat(valEl.textContent) });
+    }
+    return rows;
+  }
+
+  /* ---------- Radar map (only when SHOW_RADAR) ---------- */
+  // FMI's WMS radar is meant for evaluation use; fine for one personal screen.
+  var map = null, loadRadar = function(){};
+  if (SHOW_RADAR && window.L) {
+    map = L.map('map', {
+      zoomControl: false, attributionControl: false, scrollWheelZoom: false,
+      doubleClickZoom: false, touchZoom: false, boxZoom: false, dragging: false,
+      keyboard: false, minZoom: 6, maxZoom: 12
+    }).setView([LAT, LON], 9);
+    map.createPane('labels');
+    map.getPane('labels').style.zIndex = 450;
+    map.getPane('labels').style.pointerEvents = 'none';
+    var ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+    L.tileLayer(ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, className: 'base-tiles' }).addTo(map);
+    L.tileLayer(ESRI + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, pane: 'labels', className: 'label-tiles' }).addTo(map);
+    L.circleMarker([LAT, LON], { radius: 7, color: '#F4A94A', weight: 2, fillColor: '#F4A94A', fillOpacity: 0.85 }).addTo(map);
+
+    var recenterMap = function(){ map.invalidateSize(); map.setView([LAT, LON], map.getZoom()); };
+    setTimeout(recenterMap, 300);
+    setTimeout(recenterMap, 1200);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(recenterMap);
+    window.addEventListener('resize', recenterMap);
+    window.addEventListener('orientationchange', function(){ setTimeout(recenterMap, 300); });
+
+    var FMI_WMS_URL = 'https://openwms.fmi.fi/geoserver/wms';
+    var FMI_LAYER = 'Radar:suomi_dbz_eureffin';
+    var RADAR_OPACITY = 0.75;
+    var RADAR_CAPS_URL = 'https://openwms.fmi.fi/geoserver/Radar/suomi_dbz_eureffin/wms?service=WMS&version=1.3.0&request=GetCapabilities';
+    var radarFrames = [], radarIndex = -1, shownFrame = null, holdTicks = 0;
+
+    var makeRadarFrame = function(t){
+      var f = { time: t, ready: false, failed: false, done: false, layer: null };
+      f.layer = L.tileLayer.wms(FMI_WMS_URL, {
+        layers: FMI_LAYER, format: 'image/png', transparent: true, version: '1.1.1',
+        time: isoNoMillis(t), tileSize: 512, opacity: 0, className: 'radar-frame'
+      });
+      f.layer.on('tileerror', function(){ f.failed = true; });
+      f.layer.on('load', function(){ f.done = true; f.ready = !f.failed; });
+      f.layer.addTo(map);
+      return f;
+    };
+    var latestRadarTime = function(){
+      return fetch(RADAR_CAPS_URL).then(function(r){
+        if (!r.ok) throw new Error('caps HTTP ' + r.status);
+        return r.text();
+      }).then(function(xml){
+        var m = xml.match(/<Dimension[^>]*name="time"[^>]*>([^<]*)<\/Dimension>/);
+        if (!m) throw new Error('no time dimension');
+        var lastPart = m[1].trim().split(',').pop().split('/');
+        var end = Date.parse(lastPart.length >= 2 ? lastPart[1] : lastPart[0]);
+        if (isNaN(end)) throw new Error('bad time');
+        return Math.min(end, Date.now());
+      });
+    };
+    var buildFrameTimes = function(newestMs){
+      var nowMs = Date.now();
+      var flooredMs = nowMs - (nowMs % (5 * 60 * 1000));
+      if (typeof newestMs === 'number') flooredMs = newestMs - (newestMs % (5 * 60 * 1000));
+      var offsets = [25, 20, 15, 10, 5, 0], frames = [];
+      for (var i = 0; i < offsets.length; i++) frames.push(new Date(flooredMs - offsets[i] * 60 * 1000));
+      return frames;
+    };
+    var showRadarFrame = function(idx){
+      var f = radarFrames[idx];
+      if (shownFrame && shownFrame !== f) shownFrame.layer.setOpacity(0);
+      f.layer.setOpacity(RADAR_OPACITY);
+      shownFrame = f;
+      radarIndex = idx;
+      var isLatest = idx === radarFrames.length - 1;
+      document.getElementById('radarTime').innerHTML = (isLatest ? '<b>Nyt</b>' : 'Sadetutka ') + fmtTime(f.time);
+    };
+    var advanceRadar = function(){
+      if (radarFrames.length === 0) return;
+      if (holdTicks > 0) { holdTicks--; return; }
+      for (var step = 1; step <= radarFrames.length; step++){
+        var idx = (radarIndex + step) % radarFrames.length;
+        if (radarFrames[idx].ready){
+          showRadarFrame(idx);
+          if (idx === radarFrames.length - 1) holdTicks = 3;
+          return;
+        }
+      }
+      if (!shownFrame){
+        var allDone = true;
+        for (var i = 0; i < radarFrames.length; i++) if (!radarFrames[i].done) allDone = false;
+        if (allDone) document.getElementById('radarTime').textContent = 'Sadetutka ei juuri nyt saatavilla';
+      }
+    };
+    var applyRadarFrames = function(newestMs){
+      var times = buildFrameTimes(newestMs);
+      var old = {};
+      for (var i = 0; i < radarFrames.length; i++) old[radarFrames[i].time.getTime()] = radarFrames[i];
+      var next = [];
+      for (var j = 0; j < times.length; j++){
+        var key = times[j].getTime();
+        if (old[key] && !old[key].failed) { next.push(old[key]); delete old[key]; }
+        else next.push(makeRadarFrame(times[j]));
+      }
+      for (var k in old){
+        if (!old.hasOwnProperty(k)) continue;
+        if (old[k] === shownFrame) shownFrame = null;
+        map.removeLayer(old[k].layer);
+      }
+      radarFrames = next;
+      radarIndex = shownFrame ? radarFrames.indexOf(shownFrame) : -1;
+    };
+    loadRadar = function(){ latestRadarTime().then(applyRadarFrames, function(){ applyRadarFrames(); }); };
+    loadRadar();
+    setInterval(loadRadar, 5 * 60 * 1000);
+    setInterval(advanceRadar, 700);
+  }
+
+  /* ---------- Warnings: lightning, slippery, snow ---------- */
+  var alertState = { lightning: null, slippery: null, snow: null };
+  function renderAlerts(){
+    var order = ['lightning', 'slippery', 'snow'];
+    var icons = { lightning: ZAP_MINI, slippery: ICON_SLIPPERY, snow: ICON_SNOW };
+    var html = '';
+    for (var i = 0; i < order.length; i++){
+      var a = alertState[order[i]];
+      if (!a) continue;
+      html += '<div class="alert alert--' + order[i] + '">' +
+        '<span class="alert__icon">' + icons[order[i]] + '</span>' +
+        '<div><div class="alert__text">' + a.title + '</div>' +
+        (a.sub ? '<div class="alert__sub">' + a.sub + '</div>' : '') + '</div></div>';
+    }
+    var el = document.getElementById('alerts');
+    if (el.innerHTML !== html) {
+      el.innerHTML = html;
+      setTimeout(fitCurrent, 0);
+    }
+  }
+
+  // lightning (FMI): strikes within 20 km in the last 30 min
+  var lightningLayer = map ? L.layerGroup().addTo(map) : null;
+  var LIGHTNING_ALERT_RADIUS_KM = 20, LIGHTNING_ALERT_WINDOW_MIN = 30;
+  function haversineKm(lat1, lon1, lat2, lon2){
+    var R = 6371;
+    var dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function loadLightning(){
+    var end = new Date(), start = new Date(end.getTime() - 60 * 60 * 1000);
+    var url = buildFmiUrl('fmi::observations::lightning::simple', {
+      bbox: '18,58,32,66', starttime: isoNoMillis(start), endtime: isoNoMillis(end)
+    });
+    fetchFmiXml(url).then(function(doc){
+      var rows = parseBsWfsElements(doc), groups = {};
+      for (var i = 0; i < rows.length; i++){
+        var r = rows[i];
+        if (r.lat === null || isNaN(r.lat)) continue;
+        var key = r.time + '|' + r.lat.toFixed(3) + ',' + r.lon.toFixed(3);
+        if (!groups[key]) groups[key] = { time: r.time, lat: r.lat, lon: r.lon, params: {} };
+        groups[key].params[r.name] = r.value;
+      }
+      var strikes = [];
+      for (var k in groups){ if (groups.hasOwnProperty(k)) strikes.push(groups[k]); }
+      renderLightning(strikes);
+    }).catch(function(){
+      var pill = document.getElementById('lightningCount');
+      if (pill) pill.innerHTML = ZAP_MINI + '<span>salamatieto ei saatavilla</span>';
+    });
+  }
+  function renderLightning(strikes){
+    var now = Date.now(), shown = 0, nearest = null;
+    if (lightningLayer) lightningLayer.clearLayers();
+    for (var i = 0; i < strikes.length; i++){
+      var s = strikes[i];
+      var ageMin = (now - new Date(s.time).getTime()) / 60000;
+      if (ageMin < 0 || ageMin > 60) continue;
+      shown++;
+      var dist = haversineKm(LAT, LON, s.lat, s.lon);
+      if (ageMin <= LIGHTNING_ALERT_WINDOW_MIN && dist <= LIGHTNING_ALERT_RADIUS_KM && (!nearest || dist < nearest.dist)) nearest = { dist: dist, ageMin: ageMin };
+      if (lightningLayer) {
+        var fade = Math.max(0.15, 1 - ageMin / 60);
+        var color = s.params.cloud_indicator === 1 ? '#B892FF' : '#FFE066';
+        var peak = s.params.peak_current, radius = 5;
+        if (typeof peak === 'number' && !isNaN(peak)) radius = Math.min(11, 4 + Math.abs(peak) / 15);
+        L.circleMarker([s.lat, s.lon], { radius: radius, color: color, weight: 1, fillColor: color, fillOpacity: fade, opacity: fade }).addTo(lightningLayer);
+      }
+    }
+    var pill = document.getElementById('lightningCount');
+    if (pill) pill.innerHTML = ZAP_MINI + '<span>' + shown + ' salamaa / 60 min</span>';
+    if (nearest) {
+      alertState.lightning = {
+        title: 'Ukkosta lähellä',
+        sub: 'Salama ' + Math.max(1, Math.round(nearest.dist)) + ' km päässä'
+      };
+    } else alertState.lightning = null;
+    renderAlerts();
+  }
+  loadLightning();
+  setInterval(loadLightning, 2 * 60 * 1000);
+
+  // slippery and snow, from Open-Meteo's hourly data (yesterday included)
+  function updateWeatherAlerts(hourly){
+    var nowPrefix = helsinkiHourPrefixNow(), i0 = -1;
+    for (var i = 0; i < hourly.time.length; i++){
+      if (hourly.time[i].slice(0, 13) === nowPrefix) { i0 = i; break; }
+    }
+    if (i0 < 0) { alertState.slippery = null; alertState.snow = null; renderAlerts(); return; }
+    function val(arr, j){ return arr && typeof arr[j] === 'number' ? arr[j] : null; }
+    function sum(arr, a, b){
+      var s = 0;
+      for (var j = Math.max(0, a); j < Math.min(hourly.time.length, b); j++){ var v = val(arr, j); if (v !== null) s += v; }
+      return s;
+    }
+    var tmin = 99, tmax = -99, freezing = false, rainCold = false;
+    for (var j = Math.max(0, i0 - 6); j < Math.min(hourly.time.length, i0 + 10); j++){
+      var t = val(hourly.temperature_2m, j), code = val(hourly.weather_code, j);
+      if (t !== null) { tmin = Math.min(tmin, t); tmax = Math.max(tmax, t); }
+      if (j >= i0 - 2 && (code === 56 || code === 57 || code === 66 || code === 67)) freezing = true;
+      // rain or drizzle (not snow) on frozen ground
+      if (j >= i0 && j < i0 + 6 && code !== null && ((code >= 51 && code <= 55) || (code >= 61 && code <= 65) || (code >= 80 && code <= 82)) && t !== null && t <= 0.5) rainCold = true;
+    }
+    var wet = sum(hourly.precipitation, i0 - 12, i0 + 6) >= 0.3;
+    var crossesZero = tmin <= 0 && tmax >= 0;
+    if (freezing) alertState.slippery = { title: 'Jäätävää sadetta', sub: 'Erittäin liukasta, varo pihalla' };
+    else if (rainCold) alertState.slippery = { title: 'Liukasta', sub: 'Vettä jäiseen maahan, varo pihalla' };
+    else if (wet && crossesZero) alertState.slippery = { title: 'Liukasta', sub: 'Varo pihalla ja portailla' };
+    else alertState.slippery = null;
+
+    var snowCm = sum(hourly.snowfall, i0, i0 + 24);
+    if (snowCm >= 3) {
+      var shownCm = snowCm < 10 ? Math.round(snowCm) : Math.round(snowCm / 5) * 5;
+      alertState.snow = { title: 'Lunta noin ' + shownCm + ' cm', sub: 'Vuorokauden aikana' };
+    } else alertState.snow = null;
+    renderAlerts();
+  }
+
+  /* ---------- Sunrise / sunset + day/night tint ---------- */
+  function omDate(s, offsetSec){
+    if (typeof offsetSec !== 'number') return new Date(s);
+    var iso = s.length === 16 ? s + ':00Z' : s + 'Z';
+    return new Date(Date.parse(iso) - offsetSec * 1000);
+  }
+  function updateSunArc(sunrise, sunset){
+    lastSunrise = sunrise;
+    lastSunset = sunset;
+    document.getElementById('headerSunrise').textContent = fmtTime(sunrise);
+    document.getElementById('headerSunset').textContent = fmtTime(sunset);
+    updateTint(new Date(), sunrise, sunset);
+  }
+  function updateTint(now, sunrise, sunset){
+    var duskWindow = 45 * 60 * 1000, t = now.getTime(), nightFactor;
+    if (t < sunrise.getTime() - duskWindow || t > sunset.getTime() + duskWindow) nightFactor = 1;
+    else if (t < sunrise.getTime() + duskWindow) nightFactor = 1 - (t - (sunrise.getTime() - duskWindow)) / (2 * duskWindow);
+    else if (t < sunset.getTime() - duskWindow) nightFactor = 0;
+    else nightFactor = (t - (sunset.getTime() - duskWindow)) / (2 * duskWindow);
+    nightFactor = Math.max(0, Math.min(1, nightFactor));
+    var duskFactor = nightFactor * (1 - nightFactor) * 4;
+    document.getElementById('nightTint').style.opacity = (nightFactor * 0.85).toFixed(2);
+    document.getElementById('duskTint').style.opacity = (duskFactor * 0.9).toFixed(2);
+  }
+
+  /* ---------- Weather (Open-Meteo; FMI for the strips when available) ---------- */
+  var WEATHER_URL = 'https://api.open-meteo.com/v1/forecast'
+    + '?latitude=' + LAT + '&longitude=' + LON
+    + '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,is_day'
+    + '&hourly=temperature_2m,precipitation_probability,precipitation,snowfall,weather_code'
+    + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,daylight_duration'
+    + '&timezone=Europe%2FHelsinki&forecast_days=7&past_days=1&wind_speed_unit=ms';
+
+  function helsinkiHourPrefixNow(){
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Helsinki', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false
+    }).formatToParts(new Date());
+    var obj = {};
+    for (var i = 0; i < parts.length; i++) obj[parts[i].type] = parts[i].value;
+    var hh = obj.hour === '24' ? '00' : obj.hour;
+    return obj.year + '-' + obj.month + '-' + obj.day + 'T' + hh;
+  }
+
+  var HOURLY_ITEMS = 6, HOURLY_STEP = 2, DAILY_ITEMS = 5;
+  var DAY_NAMES = ['Su','Ma','Ti','Ke','To','Pe','La'];
+
+  function hourItem(isNow, d, iconKind, temp, pop){
+    return '<div class="strip-item' + (isNow ? ' is-now' : '') + '">' +
+      '<div class="strip-item__label">' + (isNow ? 'Nyt' : fmtTime(d)) + '</div>' +
+      '<div class="strip-item__icon">' + svgIcon(iconKind) + '</div>' +
+      '<div class="strip-item__temp">' + Math.round(temp) + '&deg;</div>' +
+      popMarkup(pop) + '</div>';
+  }
+  function dayItem(key, iconKind, max, min, pop){
+    var p = key.split('-');
+    var wd = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay();
+    var isToday = key === helsinkiDateKey(new Date());
+    var label = isToday ? 'Tänään' : DAY_NAMES[wd] + ' ' + (+p[2]) + '.';
+    return '<div class="strip-item' + (isToday ? ' is-now' : '') + '">' +
+      '<div class="strip-item__label">' + label + '</div>' +
+      '<div class="strip-item__icon">' + svgIcon(iconKind) + '</div>' +
+      '<div class="strip-item__temp">' + Math.round(max) + '&deg;</div>' +
+      '<div class="strip-item__min">' + Math.round(min) + '&deg;</div>' +
+      popMarkup(pop) + '</div>';
+  }
+
+  function renderHourly(hourly, offsetSec){
+    var nowPrefix = helsinkiHourPrefixNow(), startIdx = 0, html = '';
+    for (var i = 0; i < hourly.time.length; i++){
+      if (hourly.time[i].slice(0, 13) >= nowPrefix) { startIdx = i; break; }
+    }
+    for (var n = 0, j = startIdx; n < HOURLY_ITEMS && j < hourly.time.length; n++, j += HOURLY_STEP){
+      var t = omDate(hourly.time[j], offsetSec);
+      var info = wmoInfo(hourly.weather_code[j], isDayAt(t) ? 1 : 0);
+      html += hourItem(n === 0, t, info[0], hourly.temperature_2m[j], hourly.precipitation_probability[j]);
+    }
+    document.getElementById('hourlyStrip').innerHTML = html;
+  }
+  function renderDaily(daily, first){
+    var html = '';
+    for (var n = 0; n < DAILY_ITEMS && first + n < daily.time.length; n++){
+      var i = first + n;
+      html += dayItem(daily.time[i], wmoInfo(daily.weather_code[i], 1)[0], daily.temperature_2m_max[i], daily.temperature_2m_min[i], daily.precipitation_probability_max[i]);
+    }
+    document.getElementById('dailyStrip').innerHTML = html;
+  }
+
+  // "Päivän pituus 6 h 46 min (−4 min)"
+  function renderDayLength(daily, di, off){
+    function len(i){
+      if (i < 0) return null;
+      if (daily.daylight_duration && typeof daily.daylight_duration[i] === 'number') return daily.daylight_duration[i] / 60;
+      if (!daily.sunrise[i] || !daily.sunset[i]) return null;
+      return (omDate(daily.sunset[i], off) - omDate(daily.sunrise[i], off)) / 60000;
+    }
+    var today = len(di), yesterday = len(di - 1);
+    if (today === null) { dayLengthHtml = ''; renderSub(); return; }
+    var total = Math.round(today), h = Math.floor(total / 60), m = total - h * 60;
+    var txt = 'Päivän pituus <b>' + h + ' h ' + m + ' min</b>';
+    if (yesterday !== null) {
+      var diff = Math.round(today - yesterday);
+      txt += ' (' + (diff > 0 ? '+' + diff : diff < 0 ? '−' + (-diff) : '±0') + ' min)';
+    }
+    dayLengthHtml = txt;
+    renderSub();
+  }
+
+  // weather panel too short for everything? drop the least important bits
+  function fitCurrent(){
+    var panel = document.querySelector('.current-panel');
+    if (!panel) return;
+    panel.classList.remove('compact-1', 'compact-2', 'compact-3');
+    function overflows(){
+      var items = panel.children, bottom = 0;
+      for (var i = 0; i < items.length; i++){
+        var r = items[i].getBoundingClientRect();
+        if (r.height > 0) bottom = Math.max(bottom, r.bottom);
+      }
+      return bottom > panel.getBoundingClientRect().bottom - 6;
+    }
+    dashEl.classList.remove('is-tight');
+    for (var step = 1; step <= 3 && overflows(); step++) panel.classList.add('compact-' + step);
+    // still too little room (several warnings on a short screen): slimmer forecast strips
+    var elec = document.querySelector('.elec-panel');
+    if (overflows() || elec.scrollHeight > elec.clientHeight + 1) dashEl.classList.add('is-tight');
+  }
+  window.addEventListener('resize', fitCurrent);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCurrent);
+
+  var weatherTimer = null, lastWeatherOkAt = 0, pageStart = Date.now();
+  function scheduleWeather(ms){ clearTimeout(weatherTimer); weatherTimer = setTimeout(loadWeather, ms); }
+  function checkStale(){
+    var now = Date.now();
+    var stale = lastWeatherOkAt ? now - lastWeatherOkAt > 30 * 60 * 1000 : now - pageStart > 3 * 60 * 1000;
+    var el = document.getElementById('staleNote');
+    if (el.hidden !== !stale) { el.hidden = !stale; fitCurrent(); }
+  }
+  setInterval(checkStale, 60 * 1000);
+
+  function loadWeather(){
+    loadFmiForecastStrips();
+    fetch(WEATHER_URL).then(function(r){
+      if (!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
+      return r.json();
+    }).then(function(data){
+      var off = data.utc_offset_seconds, cur = data.current;
+      var info = wmoInfo(cur.weather_code, cur.is_day);
+      document.getElementById('curIcon').innerHTML = svgIcon(info[0]);
+      document.getElementById('curCond').textContent = info[1];
+      document.getElementById('curTemp').innerHTML = Math.round(cur.temperature_2m) + '&deg;';
+      document.getElementById('curFeels').innerHTML = Math.round(cur.apparent_temperature) + '&deg;';
+      var windHtml = withUnit(cur.wind_speed_10m, 'm/s');
+      if (typeof cur.wind_direction_10m === 'number' && !isNaN(cur.wind_direction_10m)){
+        var blowTo = Math.round((cur.wind_direction_10m + 180) % 360);
+        windHtml += '<i class="wind-arrow" style="transform:rotate(' + blowTo + 'deg)">&#8593;</i><span class="wind-dir">' + degToCardinal(cur.wind_direction_10m) + '</span>';
+      }
+      document.getElementById('curWind').innerHTML = windHtml;
+      document.getElementById('curGust').innerHTML = withUnit(cur.wind_gusts_10m, 'm/s');
+      document.getElementById('curHumidity').innerHTML = withUnit(cur.relative_humidity_2m, '%');
+      document.getElementById('curPressure').innerHTML = withUnit(cur.pressure_msl, 'hPa');
+
+      var di = data.daily.time.indexOf(helsinkiDateKey(new Date()));
+      if (di < 0) di = 0;
+      updateSunArc(omDate(data.daily.sunrise[di], off), omDate(data.daily.sunset[di], off));
+      renderDayLength(data.daily, di, off);
+      updateWeatherAlerts(data.hourly);
+      if (Date.now() - fmiStripsOkAt > 30 * 60 * 1000) {
+        renderHourly(data.hourly, off);
+        renderDaily(data.daily, di);
+      } else if (pendingFmiHourly) {
+        renderHourlyFmi(pendingFmiHourly.byTime, pendingFmiHourly.times);
+        pendingFmiHourly = null;
+      }
+      lastWeatherOkAt = Date.now();
+      checkStale();
+      fitCurrent();
+      scheduleWeather(10 * 60 * 1000);
+    }).catch(function(){
+      scheduleWeather(60 * 1000);
+    });
+  }
+
+  /* FMI forecast for the strips (Open-Meteo is the fallback) */
+  var fmiStripsOkAt = 0, pendingFmiHourly = null;
+  function fmiSymbolIcon(code){
+    if (typeof code !== 'number' || isNaN(code)) return 'cloud';
+    var c = code % 100;
+    if (c === 1) return 'clear-day';
+    if (c === 2) return 'part-day';
+    if (c === 3) return 'cloud';
+    if (c === 21) return 'drizzle';
+    if (c >= 22 && c <= 23) return 'rain';
+    if (c >= 31 && c <= 33) return 'rain';
+    if (c >= 41 && c <= 43) return 'snow';
+    if (c >= 51 && c <= 53) return 'snow';
+    if (c >= 61 && c <= 64) return 'thunder';
+    if (c >= 71 && c <= 73) return 'sleet';
+    if (c >= 81 && c <= 83) return 'sleet';
+    if (c >= 91 && c <= 92) return 'fog';
+    return 'cloud';
+  }
+  function renderHourlyFmi(byTime, futureTimes){
+    var html = '';
+    for (var n = 0, j = 0; n < HOURLY_ITEMS && j < futureTimes.length; n++, j += HOURLY_STEP){
+      var iso = futureTimes[j], d = new Date(iso), e = byTime[iso];
+      html += hourItem(n === 0, d, nightify(fmiSymbolIcon(e.WeatherSymbol3), isDayAt(d)), e.Temperature,
+        typeof e.PoP === 'number' ? Math.round(e.PoP) : null);
+    }
+    document.getElementById('hourlyStrip').innerHTML = html;
+  }
+  function renderDailyFmi(byTime, times){
+    var byDay = {}, order = [];
+    for (var i = 0; i < times.length; i++){
+      var iso = times[i], d = new Date(iso), key = helsinkiDateKey(d), e = byTime[iso];
+      if (!byDay[key]) { byDay[key] = { temps: [], pops: [], symbol: null, symbolDist: -1 }; order.push(key); }
+      if (typeof e.Temperature === 'number') byDay[key].temps.push(e.Temperature);
+      if (typeof e.PoP === 'number') byDay[key].pops.push(e.PoP);
+      if (typeof e.WeatherSymbol3 === 'number'){
+        var dist = Math.abs(helsinkiHour(d) - 14);
+        if (byDay[key].symbolDist === -1 || dist < byDay[key].symbolDist){ byDay[key].symbol = e.WeatherSymbol3; byDay[key].symbolDist = dist; }
+      }
+    }
+    var html = '', count = 0;
+    for (var k = 0; k < order.length && count < DAILY_ITEMS; k++){
+      var day = byDay[order[k]];
+      if (!day.temps.length) continue;
+      count++;
+      html += dayItem(order[k], fmiSymbolIcon(day.symbol), Math.max.apply(null, day.temps), Math.min.apply(null, day.temps),
+        day.pops.length ? Math.round(Math.max.apply(null, day.pops)) : null);
+    }
+    document.getElementById('dailyStrip').innerHTML = html;
+  }
+  function loadFmiForecastStrips(){
+    var end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    var url = buildFmiUrl('fmi::forecast::edited::weather::scandinavia::point::simple', {
+      latlon: LAT + ',' + LON,
+      parameters: 'Temperature,WeatherSymbol3,PoP',
+      timestep: 60,
+      starttime: isoNoMillis(helsinkiMidnight()),
+      endtime: isoNoMillis(end)
+    });
+    fetchFmiXml(url).then(function(doc){
+      var rows = parseBsWfsElements(doc);
+      if (!rows.length) return;
+      var byTime = {};
+      for (var i = 0; i < rows.length; i++){
+        var r = rows[i];
+        if (isNaN(r.value)) continue;
+        if (!byTime[r.time]) byTime[r.time] = {};
+        byTime[r.time][r.name] = r.value;
+      }
+      var times = [];
+      for (var t in byTime){ if (byTime.hasOwnProperty(t) && typeof byTime[t].Temperature === 'number') times.push(t); }
+      times.sort();
+      var hourStartIso = isoNoMillis(new Date(Date.now() - (Date.now() % (60 * 60 * 1000))));
+      var fromNow = [];
+      for (var j = 0; j < times.length; j++){ if (times[j] >= hourStartIso) fromNow.push(times[j]); }
+      if (!fromNow.length) return;
+      renderHourlyFmi(byTime, fromNow);
+      renderDailyFmi(byTime, times);
+      fmiStripsOkAt = Date.now();
+      pendingFmiHourly = lastSunrise ? null : { byTime: byTime, times: fromNow };
+    }).catch(function(){ /* Open-Meteo strips stay */ });
+  }
+
+  /* ---------- Electricity spot price (spot-hinta.fi: free, no key) ---------- */
+  // 15-minute prices with VAT, today and (from about 14:00) tomorrow.
+  var PRICE_URL = 'https://api.spot-hinta.fi/TodayAndDayForward';
+  var priceSlots = [], priceTimer = null, priceFailed = false;
+
+  function loadPrices(){
+    fetch(PRICE_URL).then(function(r){
+      if (!r.ok) throw new Error('price HTTP ' + r.status);
+      return r.json();
+    }).then(function(list){
+      var out = [];
+      for (var i = 0; i < (list || []).length; i++){
+        var t = Date.parse(list[i].DateTime), p = list[i].PriceWithTax;
+        if (!isNaN(t) && typeof p === 'number') out.push({ t: t, p: p * 100 + PRICE_EXTRA_CENTS });
+      }
+      out.sort(function(a, b){ return a.t - b.t; });
+      if (out.length) priceSlots = out;
+      priceFailed = false;
+      renderPrice();
+      // tomorrow's prices come out around 14:00: check more often until they're here
+      var hasTomorrow = hourlyPrices().byKey[tomorrowKey() + '|12'] !== undefined;
+      var h = helsinkiHour(new Date());
+      schedulePrices(!hasTomorrow && h >= 13 ? 15 * 60 * 1000 : 60 * 60 * 1000);
+    }).catch(function(){
+      priceFailed = true;
+      renderPrice();
+      schedulePrices(10 * 60 * 1000);
+    });
+  }
+  function schedulePrices(ms){ clearTimeout(priceTimer); priceTimer = setTimeout(loadPrices, ms); }
+
+  function fmtCents(c){
+    var s = Math.abs(c) >= 9.95 ? Math.round(c).toString() : c.toFixed(1).replace('.', ',');
+    return s.replace('-', '−');
+  }
+  function levelOf(p){ return p < PRICE_CHEAP ? 'cheap' : p >= PRICE_VHIGH ? 'vhigh' : p >= PRICE_HIGH ? 'high' : 'normal'; }
+  var LEVEL_WORD = { cheap: 'Edullinen', normal: 'Tavallinen', high: 'Kallis', vhigh: 'Erittäin kallis' };
+
+  // whole-hour averages: [{ t, key, h, p }] plus a lookup "YYYY-MM-DD|h"
+  function hourlyPrices(){
+    var byStart = {}, starts = [];
+    for (var i = 0; i < priceSlots.length; i++){
+      var s = priceSlots[i], hs = s.t - (s.t % (60 * 60 * 1000));
+      if (!byStart[hs]) { byStart[hs] = []; starts.push(hs); }
+      byStart[hs].push(s.p);
+    }
+    var list = [], byKey = {};
+    for (var j = 0; j < starts.length; j++){
+      var ps = byStart[starts[j]], sum = 0;
+      for (var q = 0; q < ps.length; q++) sum += ps[q];
+      var d = new Date(starts[j]);
+      var item = { t: starts[j], key: helsinkiDateKey(d), h: helsinkiHour(d), p: sum / ps.length };
+      list.push(item);
+      byKey[item.key + '|' + item.h] = item;
+    }
+    return { list: list, byKey: byKey };
+  }
+
+  // cheapest run of n whole hours that starts at or after fromMs; filter(item) limits the start
+  function cheapestBlock(list, n, fromMs, filter){
+    var best = null;
+    for (var i = 0; i + n <= list.length; i++){
+      var a = list[i];
+      if (a.t < fromMs || (filter && !filter(a))) continue;
+      if (list[i + n - 1].t !== a.t + (n - 1) * 60 * 60 * 1000) continue;
+      var sum = 0;
+      for (var k = 0; k < n; k++) sum += list[i + k].p;
+      if (!best || sum / n < best.avg - 1e-9) best = { start: a, avg: sum / n, n: n };
+    }
+    return best;
+  }
+  function blockText(b){
+    var h1 = b.start.h, h2 = h1 + b.n;    // "klo 23–24", not "23–0"
+    return (h1 < 10 ? '0' : '') + h1 + '–' + (h2 < 10 ? '0' : '') + h2;
+  }
+  function dayWord(key){ return key === helsinkiDateKey(new Date()) ? 'tänään' : key === tomorrowKey() ? 'huomenna' : ''; }
+  function avgOf(list, key){
+    var sum = 0, n = 0;
+    for (var i = 0; i < list.length; i++) if (list[i].key === key) { sum += list[i].p; n++; }
+    return n >= 20 ? sum / n : null;    // only for a (nearly) full day
+  }
+
+  function renderPrice(){
+    var now = Date.now();
+    var nowEl = document.getElementById('priceNow'), lvlEl = document.getElementById('priceLevel');
+    var noteEl = document.getElementById('priceNote'), chartEl = document.getElementById('priceChart');
+    var factsEl = document.getElementById('priceFacts');
+    var slotLen = priceSlots.length > 1 ? priceSlots[1].t - priceSlots[0].t : 15 * 60 * 1000;
+    var cur = null;
+    for (var i = 0; i < priceSlots.length; i++){
+      if (priceSlots[i].t <= now && now < priceSlots[i].t + slotLen) { cur = priceSlots[i]; break; }
+    }
+    var panelEl = chartEl.parentNode;
+    if (!cur) {
+      panelEl.className = 'panel elec-panel is-error';
+      nowEl.innerHTML = '&ndash;';
+      lvlEl.innerHTML = '';
+      noteEl.textContent = '';
+      factsEl.innerHTML = '';
+      chartEl.innerHTML = '<div class="elec-error">' + (priceFailed || priceSlots.length
+        ? 'Sähkön hintoja ei juuri nyt saatu. Yritetään uudelleen.'
+        : 'Sähkön hinnat latautuvat…') + '</div>';
+      return;
+    }
+    panelEl.className = 'panel elec-panel';
+    var lvl = levelOf(cur.p);
+    nowEl.innerHTML = fmtCents(cur.p) + '<span class="unit">snt/kWh</span>';
+    lvlEl.className = 'level level--' + lvl;
+    lvlEl.innerHTML = '<i></i>' + LEVEL_WORD[lvl];
+    noteEl.textContent = PRICE_EXTRA_CENTS ? 'sis. siirron ja marginaalin' : 'pörssihinta, sis. alv';
+
+    var hp = hourlyPrices(), list = hp.list;
+    var todayK = helsinkiDateKey(new Date()), tomK = tomorrowKey();
+    var hourNow = now - (now % (60 * 60 * 1000));
+
+    // cheapest 3 h from now on
+    var best = cheapestBlock(list, 3, hourNow);
+    var bestHours = {};
+    if (best) for (var b = 0; b < 3; b++) bestHours[best.start.t + b * 60 * 60 * 1000] = true;
+
+    // chart: today, and tomorrow when published
+    var maxP = PRICE_HIGH;
+    for (var m = 0; m < list.length; m++) if ((list[m].key === todayK || list[m].key === tomK) && list[m].p > maxP) maxP = list[m].p;
+    // 2-3 gridlines: 10/20, 20/40/60...
+    var steps = [5, 10, 20, 50, 100, 200], step = 5, top = 10;
+    for (var si = 0; si < steps.length; si++){
+      step = steps[si];
+      top = Math.ceil(maxP / step) * step;
+      if (top / step <= 3) break;
+    }
+    function group(key, label, withGrid){
+      var have = 0, bars = '', bestFrom = -1, bestTo = -1;
+      for (var h = 0; h < 24; h++){
+        var it = hp.byKey[key + '|' + h];
+        if (!it) { bars += '<div class="b"></div>'; continue; }
+        have++;
+        var pct = Math.max(0, it.p) / top * 100;
+        var cls = 'b b--' + levelOf(it.p) + (it.t < hourNow ? ' is-past' : '') + (it.t === hourNow ? ' is-now' : '');
+        if (bestHours[it.t]) { if (bestFrom < 0) bestFrom = h; bestTo = h + 1; }
+        bars += '<div class="' + cls + '"><i style="height:' + pct.toFixed(1) + '%"></i></div>';
+      }
+      var avg = avgOf(list, key);
+      var head = '<div class="cg__label"><b>' + label + '</b>' + (avg !== null ? 'keskim. ' + fmtCents(avg) : '') + '</div>';
+      if (!have) {
+        return '<div class="cg">' + head + '<div class="cg__wait">Huomisen hinnat tulevat noin klo 14</div><div class="cg__axis"></div></div>';
+      }
+      var grid = '';
+      if (withGrid) {
+        for (var g = step; g <= top; g += step) {
+          grid += '<div class="cg__grid" style="bottom:' + (g / top * 100).toFixed(1) + '%"></div>';
+        }
+      }
+      var axis = '<div class="cg__axis"><span style="left:0">0</span><span style="left:25%">6</span><span style="left:50%">12</span><span style="left:75%">18</span></div>';
+      if (bestFrom >= 0) bars += '<div class="best-line" style="left:' + (bestFrom / 24 * 100).toFixed(2) + '%;width:' + ((bestTo - bestFrom) / 24 * 100).toFixed(2) + '%"></div>';
+      return '<div class="cg">' + head + '<div class="cg__bars">' + grid + bars + '</div>' + axis + '</div>';
+    }
+    var yax = '<div class="yax"><div class="cg__label"><b>&nbsp;</b></div><div class="yax__scale">';
+    for (var y = 0; y <= top; y += step) yax += '<span style="bottom:' + (y / top * 100).toFixed(1) + '%">' + y + '</span>';
+    yax += '</div><div class="cg__axis"></div></div>';
+    chartEl.innerHTML = '<div class="chart">' + yax + group(todayK, 'Tänään', true) + group(tomK, 'Huomenna', true) + '</div>';
+
+    var facts = '';
+    if (best) {
+      facts += '<div class="fact"><div class="fact__label">Halvin 3 h ' + dayWord(best.start.key) + '<span class="mark-best"></span></div>' +
+        '<div class="fact__value">' + blockText(best) + '<span class="fact__also">' + fmtCents(best.avg) + ' snt</span></div></div>';
+    }
+    factsEl.innerHTML = facts;
+  }
+  loadPrices();
+  setInterval(renderPrice, 60 * 1000);
+
+  /* ---------- Start ---------- */
+  loadWeather();
+
+  // tablets pause timers while the screen is off: refresh straight away when back
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState !== 'visible') return;
+    if (Date.now() - lastWeatherOkAt > 10 * 60 * 1000) loadWeather();
+    loadPrices();
+    loadLightning();
+    loadRadar();
+  });
+
+  setInterval(function(){
+    if (lastSunrise && lastSunset) updateSunArc(lastSunrise, lastSunset);
+  }, 60000);
+
+})();
+</script>
+</body>
+</html>
