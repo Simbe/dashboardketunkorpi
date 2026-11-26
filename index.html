@@ -321,7 +321,7 @@
     white-space: nowrap;
   }
   .current__cond { font-size: var(--fs-l); font-weight: 600; line-height: 1.15; margin-top: calc(var(--u) * 0.6); }
-  .current__feels { font-size: var(--fs-m); color: var(--muted); margin-top: calc(var(--u) * 0.25); }
+  .current__feels { font-size: var(--fs-l); color: var(--muted); margin-top: calc(var(--u) * 0.2); line-height: 1.1; }
   .current__feels span { color: var(--text); font-weight: 700; }
   .current__grid {
     display: grid;
@@ -353,9 +353,10 @@
   .dash--noradar .current__temp { font-size: calc(var(--u) * 12.5); }
   .dash--noradar .current__icon { font-size: calc(var(--u) * 9); }
   .dash--noradar .current__cond { font-size: var(--fs-xl); margin-top: calc(var(--u) * 1); }
-  .dash--noradar .current__feels { font-size: var(--fs-l); }
+  .dash--noradar .current__feels { font-size: var(--fs-xl); }
   .current-panel.compact-1 .current__temp { font-size: calc(var(--u) * 8.4); }
   .current-panel.compact-1 .current__icon { font-size: calc(var(--u) * 6.4); }
+  .current-panel.compact-1 .current__feels { font-size: var(--fs-m); margin-top: calc(var(--u) * 0.25); }
   .current-panel.compact-2 .stat--minor { display: none; }
   .current-panel.compact-3 .current__grid { display: none; }
 
@@ -410,10 +411,10 @@
   .level--vhigh i { background: var(--p-vhigh); }
   .elec-now__note { font-size: var(--fs-xs); color: var(--muted-dim); margin-top: calc(var(--u) * 0.4); white-space: nowrap; }
 
-  .fact__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; white-space: nowrap; }
-  .fact__value { font-size: var(--fs-xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
+  .fact__label { font-size: var(--fs-m); color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .fact__value { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
   .fact__value .unit { font-family: 'Inter', sans-serif; }
-  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-s); color: var(--muted); font-weight: 500; margin-left: 0.5em; }
+  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-m); color: var(--muted); font-weight: 500; margin-left: 0.5em; }
   .fact__label .mark-best {
     display: inline-block;
     width: 1.2em;
@@ -541,13 +542,13 @@
   .strip-item__icon { font-size: calc(var(--u) * 3.6); margin: calc(var(--u) * 0.3) 0 calc(var(--u) * 0.2); }
   .strip-item__temp {
     font-family: var(--num);
-    font-size: var(--fs-xl);
+    font-size: var(--fs-2xl);
     letter-spacing: -0.01em;
     font-weight: 600;
     line-height: 1.05;
     white-space: nowrap;
   }
-  .strip-item__min { font-family: var(--num); font-size: var(--fs-m); color: var(--muted-dim); font-weight: 500; line-height: 1.1; white-space: nowrap; }
+  .strip-item__min { font-family: var(--num); font-size: var(--fs-l); color: var(--muted-dim); font-weight: 500; line-height: 1.1; white-space: nowrap; }
   .strip-item__pop {
     display: flex;
     flex-direction: column;
@@ -689,7 +690,7 @@
 (function(){
 
   /* ================= SETTINGS ================= */
-  var VERSION = '1.1';
+  var VERSION = '1.2';
   // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
   // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
   var SHOW_RADAR = true;
