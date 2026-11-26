@@ -46,6 +46,7 @@
     --fs-l:   calc(var(--u) * 2.7);
     --fs-xl:  calc(var(--u) * 3.1);
     --fs-2xl: calc(var(--u) * 3.6);
+    --fs-3xl: calc(var(--u) * 4.5);
   }
 
   * { box-sizing: border-box; }
@@ -233,7 +234,7 @@
     grid-gap: var(--gap);
   }
   .dash--radar .dash__body {
-    grid-template-columns: 1.45fr 1fr;
+    grid-template-columns: 1.25fr 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas: "radar current" "elec elec";
   }
@@ -320,9 +321,10 @@
     letter-spacing: -0.04em;
     white-space: nowrap;
   }
-  .current__cond { font-size: var(--fs-l); font-weight: 600; line-height: 1.15; margin-top: calc(var(--u) * 0.6); }
-  .current__feels { font-size: var(--fs-l); color: var(--muted); margin-top: calc(var(--u) * 0.2); line-height: 1.1; }
-  .current__feels span { color: var(--text); font-weight: 700; }
+  .current__txt { flex: 1 1 0; min-width: 0; }
+  .current__cond { font-size: var(--fs-xl); font-weight: 600; line-height: 1.1; }
+  .current__feels { font-size: var(--fs-l); color: var(--muted); margin-top: calc(var(--u) * 0.5); line-height: 1.1; }
+  .current__feels span { display: block; color: var(--text); font-weight: 700; font-size: var(--fs-2xl); line-height: 1.05; }
   .current__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -330,8 +332,8 @@
     margin-top: calc(var(--u) * 1);
   }
   .stat { display: flex; flex-direction: column; gap: calc(var(--u) * 0.15); min-width: 0; }
-  .stat__label { font-size: var(--fs-s); font-weight: 500; color: var(--muted-dim); }
-  .stat__value { font-size: var(--fs-xl); font-weight: 600; line-height: 1.05; white-space: nowrap; }
+  .stat__label { font-size: var(--fs-m); font-weight: 500; color: var(--muted-dim); }
+  .stat__value { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.05; white-space: nowrap; }
   .unit { font-size: 0.6em; font-weight: 500; color: var(--muted); margin-left: 0.15em; }
   .unit--tight { margin-left: 0.02em; }
   .wind-arrow {
@@ -352,13 +354,24 @@
   /* short panel (a warning is showing, or a smaller screen): drop bits step by step */
   .dash--noradar .current__temp { font-size: calc(var(--u) * 12.5); }
   .dash--noradar .current__icon { font-size: calc(var(--u) * 9); }
-  .dash--noradar .current__cond { font-size: var(--fs-xl); margin-top: calc(var(--u) * 1); }
-  .dash--noradar .current__feels { font-size: var(--fs-xl); }
+  .dash--noradar .current__top { flex-wrap: wrap; }
+  .dash--noradar .current__txt { flex: 1 0 100%; margin-top: calc(var(--u) * 0.8); }
+  .dash--noradar .current__cond { font-size: var(--fs-xl); }
+  .dash--noradar .current__feels { font-size: var(--fs-l); }
   .current-panel.compact-1 .current__temp { font-size: calc(var(--u) * 8.4); }
   .current-panel.compact-1 .current__icon { font-size: calc(var(--u) * 6.4); }
-  .current-panel.compact-1 .current__feels { font-size: var(--fs-m); margin-top: calc(var(--u) * 0.25); }
+  .current-panel.compact-1 .current__cond { font-size: var(--fs-l); }
+  .current-panel.compact-1 .current__feels span { font-size: var(--fs-xl); }
   .current-panel.compact-2 .stat--minor { display: none; }
-  .current-panel.compact-3 .current__grid { display: none; }
+  .current-panel.compact-3 .current__top { flex-wrap: wrap; }
+  .current-panel.compact-3 .current__temp { font-size: calc(var(--u) * 7); }
+  .current-panel.compact-3 .current__icon { font-size: calc(var(--u) * 5.4); }
+  .current-panel.compact-3 .current__txt { flex: 1 0 100%; margin-top: calc(var(--u) * 0.3); }
+  .current-panel.compact-3 .current__feels { font-size: var(--fs-m); margin-top: calc(var(--u) * 0.25); }
+  .current-panel.compact-3 .current__feels span { display: inline; font-size: var(--fs-m); }
+  .current-panel.compact-3 .stat__label { font-size: var(--fs-s); }
+  .current-panel.compact-3 .stat__value { font-size: var(--fs-xl); }
+  .current-panel.compact-4 .current__grid { display: none; }
 
   /* ELECTRICITY */
   .elec-panel {
@@ -412,9 +425,9 @@
   .elec-now__note { font-size: var(--fs-xs); color: var(--muted-dim); margin-top: calc(var(--u) * 0.4); white-space: nowrap; }
 
   .fact__label { font-size: var(--fs-m); color: var(--muted); font-weight: 500; white-space: nowrap; }
-  .fact__value { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
+  .fact__value { font-size: var(--fs-3xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
   .fact__value .unit { font-family: 'Inter', sans-serif; }
-  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-m); color: var(--muted); font-weight: 500; margin-left: 0.5em; }
+  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-l); color: var(--muted); font-weight: 500; display: block; margin-top: calc(var(--u) * 0.2); }
   .fact__label .mark-best {
     display: inline-block;
     width: 1.2em;
@@ -642,9 +655,11 @@
         <div class="current__top">
           <div class="current__icon" id="curIcon"><svg class="wi" viewBox="-1 -1 26 26"><path class="wi-cloud" d="M18 10h-1.26A8 8 0 1 0 9 20h9a4 4 0 0 0 0-8z"/></svg></div>
           <div class="current__temp num" id="curTemp">--&deg;</div>
+          <div class="current__txt">
+            <div class="current__cond" id="curCond">Säätiedot latautuvat&hellip;</div>
+            <div class="current__feels">Tuntuu kuin <span class="num" id="curFeels">--&deg;</span></div>
+          </div>
         </div>
-        <div class="current__cond" id="curCond">Säätiedot latautuvat&hellip;</div>
-        <div class="current__feels">Tuntuu kuin <span class="num" id="curFeels">--&deg;</span></div>
       </div>
       <div>
         <div class="current__grid">
@@ -690,7 +705,7 @@
 (function(){
 
   /* ================= SETTINGS ================= */
-  var VERSION = '1.2';
+  var VERSION = '1.3';
   // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
   // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
   var SHOW_RADAR = true;
@@ -1379,7 +1394,7 @@
   function fitCurrent(){
     var panel = document.querySelector('.current-panel');
     if (!panel) return;
-    panel.classList.remove('compact-1', 'compact-2', 'compact-3');
+    panel.classList.remove('compact-1', 'compact-2', 'compact-3', 'compact-4');
     function overflows(){
       var items = panel.children, bottom = 0;
       for (var i = 0; i < items.length; i++){
@@ -1389,7 +1404,7 @@
       return bottom > panel.getBoundingClientRect().bottom - 6;
     }
     dashEl.classList.remove('is-tight');
-    for (var step = 1; step <= 3 && overflows(); step++) panel.classList.add('compact-' + step);
+    for (var step = 1; step <= 4 && overflows(); step++) panel.classList.add('compact-' + step);
     // still too little room (several warnings on a short screen): slimmer forecast strips
     var elec = document.querySelector('.elec-panel');
     if (overflows() || elec.scrollHeight > elec.clientHeight + 1) dashEl.classList.add('is-tight');
