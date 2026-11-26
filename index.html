@@ -313,9 +313,9 @@
     padding: calc(var(--u) * 1.4) calc(var(--u) * 2.2);
   }
   .current__top { display: flex; align-items: center; gap: calc(var(--u) * 1.4); }
-  .current__icon { font-size: calc(var(--u) * 7.6); line-height: 1; flex: 0 0 auto; }
+  .current__icon { font-size: calc(var(--u) * 6.4); line-height: 1; flex: 0 0 auto; }
   .current__temp {
-    font-size: calc(var(--u) * 10.2);
+    font-size: calc(var(--u) * 8.4);
     font-weight: 700;
     line-height: 0.8;
     letter-spacing: -0.04em;
@@ -358,11 +358,11 @@
   .dash--noradar .current__txt { flex: 1 0 100%; margin-top: calc(var(--u) * 0.8); }
   .dash--noradar .current__cond { font-size: var(--fs-xl); }
   .dash--noradar .current__feels { font-size: var(--fs-l); }
-  .current-panel.compact-1 .current__temp { font-size: calc(var(--u) * 8.4); }
-  .current-panel.compact-1 .current__icon { font-size: calc(var(--u) * 6.4); }
-  .current-panel.compact-1 .current__cond { font-size: var(--fs-l); }
-  .current-panel.compact-1 .current__feels span { font-size: var(--fs-xl); }
-  .current-panel.compact-2 .stat--minor { display: none; }
+  .current-panel.compact-2 .current__temp { font-size: calc(var(--u) * 7.4); }
+  .current-panel.compact-2 .current__icon { font-size: calc(var(--u) * 5.6); }
+  .current-panel.compact-2 .current__cond { font-size: var(--fs-l); }
+  .current-panel.compact-2 .current__feels span { font-size: var(--fs-xl); }
+  .current-panel.compact-1 .stat--minor { display: none; }
   .current-panel.compact-3 .current__top { flex-wrap: wrap; }
   .current-panel.compact-3 .current__temp { font-size: calc(var(--u) * 7); }
   .current-panel.compact-3 .current__icon { font-size: calc(var(--u) * 5.4); }
@@ -705,7 +705,7 @@
 (function(){
 
   /* ================= SETTINGS ================= */
-  var VERSION = '1.3';
+  var VERSION = '1.4';
   // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
   // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
   var SHOW_RADAR = true;
