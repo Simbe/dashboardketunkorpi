@@ -546,8 +546,9 @@
   .b--cheap i { background: var(--p-cheap); }
   .b--high i { background: var(--p-high); }
   .b--vhigh i { background: var(--p-vhigh); }
-  .b.is-past i { opacity: 0.32; }
   .b.is-now i { box-shadow: 0 0 0 2px var(--text); }
+  .cg__divider { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed rgba(157,175,207,0.4); pointer-events: none; }
+  .cg__wait--abs { position: absolute; right: 0; top: 0; bottom: 0; margin: 0; flex: none; }
   .cg__axis { position: relative; height: calc(var(--fs-s) * 1.2); margin-top: calc(var(--u) * 0.6); }
   .cg__axis span {
     position: absolute;
@@ -770,7 +771,7 @@
 (function(){
 
   /* ================= SETTINGS ================= */
-  var VERSION = '2.0';
+  var VERSION = '2.1';
   // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
   // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
   var SHOW_RADAR = true;
@@ -1729,12 +1730,6 @@
     return (h1 < 10 ? '0' : '') + h1 + '–' + (h2 < 10 ? '0' : '') + h2;
   }
   function dayWord(key){ return key === helsinkiDateKey(new Date()) ? 'tänään' : key === tomorrowKey() ? 'huomenna' : ''; }
-  function avgOf(list, key){
-    var sum = 0, n = 0;
-    for (var i = 0; i < list.length; i++) if (list[i].key === key) { sum += list[i].p; n++; }
-    return n >= 20 ? sum / n : null;    // only for a (nearly) full day
-  }
-
   function renderPrice(){
     var now = Date.now();
     var nowEl = document.getElementById('priceNow'), lvlEl = document.getElementById('priceLevel');
@@ -1770,12 +1765,16 @@
 
     // cheapest 3 h from now on
     var best = cheapestBlock(list, 3, hourNow);
-    var bestHours = {};
-    if (best) for (var b = 0; b < 3; b++) bestHours[best.start.t + b * 60 * 60 * 1000] = true;
 
-    // chart: today, and tomorrow when published
+    // chart: the next 24 hours from this hour on, one row of bars (no past hours, no day split)
+    var HOUR_MS = 60 * 60 * 1000, byT = {}, shown = [], lastHave = -1, n, k;
+    for (k = 0; k < list.length; k++) byT[list[k].t] = list[k];
     var maxP = PRICE_HIGH;
-    for (var m = 0; m < list.length; m++) if ((list[m].key === todayK || list[m].key === tomK) && list[m].p > maxP) maxP = list[m].p;
+    for (n = 0; n < 24; n++){
+      var itn = byT[hourNow + n * HOUR_MS] || null;
+      shown.push(itn);
+      if (itn) { lastHave = n; if (itn.p > maxP) maxP = itn.p; }
+    }
     // 2-3 gridlines: 10/20, 20/40/60...
     var steps = [5, 10, 20, 50, 100, 200], step = 5, top = 10;
     for (var si = 0; si < steps.length; si++){
@@ -1783,34 +1782,26 @@
       top = Math.ceil(maxP / step) * step;
       if (top / step <= 3) break;
     }
-    function group(key, label, withGrid){
-      var have = 0, bars = '';
-      for (var h = 0; h < 24; h++){
-        var it = hp.byKey[key + '|' + h];
-        if (!it) { bars += '<div class="b"></div>'; continue; }
-        have++;
-        var pct = Math.max(0, it.p) / top * 100;
-        var cls = 'b b--' + levelOf(it.p) + (it.t < hourNow ? ' is-past' : '') + (it.t === hourNow ? ' is-now' : '');
-        bars += '<div class="' + cls + '"><i style="height:' + pct.toFixed(1) + '%"></i></div>';
-      }
-      var avg = avgOf(list, key);
-      var head = '<div class="cg__label"><b>' + label + '</b>' + (avg !== null ? 'keskim. ' + fmtCents(avg) : '&nbsp;') + '</div>';
-      if (!have) {
-        return '<div class="cg">' + head + '<div class="cg__wait">Huomisen hinnat tulevat noin klo 14</div><div class="cg__axis"></div></div>';
-      }
-      var grid = '';
-      if (withGrid) {
-        for (var g = step; g <= top; g += step) {
-          grid += '<div class="cg__grid" style="bottom:' + (g / top * 100).toFixed(1) + '%"></div>';
-        }
-      }
-      var axis = '<div class="cg__axis"><span style="left:0">0</span><span style="left:25%">6</span><span style="left:50%">12</span><span style="left:75%">18</span></div>';
-      return '<div class="cg">' + head + '<div class="cg__bars">' + grid + bars + '</div>' + axis + '</div>';
+    var bars = '', grid = '', axis = '', wait = '';
+    for (n = 0; n < 24; n++){
+      var it = shown[n];
+      if (!it) { bars += '<div class="b"></div>'; continue; }
+      var pct = Math.max(0, it.p) / top * 100;
+      bars += '<div class="b b--' + levelOf(it.p) + (n === 0 ? ' is-now' : '') + '"><i style="height:' + pct.toFixed(1) + '%"></i></div>';
+      if (it.h === 0 && n > 0) grid += '<div class="cg__divider" style="left:' + (n / 24 * 100).toFixed(2) + '%"></div>';
+      if (n >= 4 && it.h % 6 === 0) axis += '<span style="left:' + (n / 24 * 100).toFixed(2) + '%">' + (it.h < 10 ? '0' : '') + it.h + '</span>';
     }
-    var yax = '<div class="yax"><div class="cg__label"><b>&nbsp;</b>&nbsp;</div><div class="yax__scale">';
+    if (shown[0]) axis = '<span style="left:0">Nyt</span>' + axis;
+    for (var g = step; g <= top; g += step) {
+      grid += '<div class="cg__grid" style="bottom:' + (g / top * 100).toFixed(1) + '%"></div>';
+    }
+    // tomorrow's prices are not out yet: say so where the bars would be
+    if (lastHave < 23) wait = '<div class="cg__wait cg__wait--abs" style="left:' + ((lastHave + 1) / 24 * 100).toFixed(2) + '%">Huomisen hinnat tulevat noin klo 14</div>';
+    var yax = '<div class="yax"><div class="cg__label">&nbsp;</div><div class="yax__scale">';
     for (var y = 0; y <= top; y += step) if ((y / step) % 2 === 0) yax += '<span style="bottom:' + (y / top * 100).toFixed(1) + '%">' + y + '</span>';
     yax += '</div><div class="cg__axis"></div></div>';
-    chartEl.innerHTML = '<div class="chart">' + yax + group(todayK, 'Tänään', true) + group(tomK, 'Huomenna', true) + '</div>';
+    chartEl.innerHTML = '<div class="chart">' + yax + '<div class="cg"><div class="cg__label">Seuraavat tunnit</div>' +
+      '<div class="cg__bars">' + grid + bars + wait + '</div><div class="cg__axis">' + axis + '</div></div></div>';
 
     var facts = '';
     if (best) {
