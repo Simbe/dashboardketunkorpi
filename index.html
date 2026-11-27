@@ -22,8 +22,8 @@
     --panel-edge:#1C2A45;
     --border:#223050;
     --text:#EAF2FF;
-    --muted:#9DAFCF;
-    --muted-dim:#8497BA;
+    --muted:#B4C3DE;
+    --muted-dim:#A2B3D1;
     --amber:#F4A94A;
     --teal:#4FD1C5;
     --red:#E8646B;
@@ -38,14 +38,16 @@
     --gap: calc(var(--u) * 1.1);
     --radius: calc(var(--u) * 1.6);
     --num: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
-    /* type scale, a step bigger than the other dashboards
-       (18 / 21 / 24 / 28 / 32 / 37 px on the 1024 x 768 iPad) */
-    --fs-xs:  calc(var(--u) * 1.8);
-    --fs-s:   calc(var(--u) * 2.05);
-    --fs-m:   calc(var(--u) * 2.35);
+    /* type scale: few sizes, so the screen reads calmly from a distance
+       (24 / 28 / 40 px on the 1024 x 768 iPad, plus the big numerals).
+       s = small print (axes, notes), m = words and labels, xl = the numbers that matter,
+       3xl = date and the cheapest 3 h hours. The old names stay so the CSS below keeps working. */
+    --fs-xs:  calc(var(--u) * 2.35);
+    --fs-s:   calc(var(--u) * 2.35);
+    --fs-m:   calc(var(--u) * 2.7);
     --fs-l:   calc(var(--u) * 2.7);
-    --fs-xl:  calc(var(--u) * 3.1);
-    --fs-2xl: calc(var(--u) * 3.6);
+    --fs-xl:  calc(var(--u) * 3.9);
+    --fs-2xl: calc(var(--u) * 3.9);
     --fs-3xl: calc(var(--u) * 4.5);
   }
 
@@ -141,7 +143,7 @@
   }
   .hdr-left { min-width: 0; flex: 1 1 auto; }
   .clock__date {
-    font-size: calc(var(--u) * 4.3);
+    font-size: var(--fs-3xl);
     line-height: 1.05;
     letter-spacing: -0.015em;
     white-space: nowrap;
@@ -150,7 +152,7 @@
   .clock__daymonth { color: var(--muted); font-weight: 500; }
   .flag { display: inline-block; height: 0.62em; width: 1.02em; margin-left: 0.35em; vertical-align: 0.05em; border-radius: 2px; }
   .hdr-sub {
-    font-size: var(--fs-m);
+    font-size: var(--fs-s);
     color: var(--muted);
     margin-top: calc(var(--u) * 0.5);
     white-space: nowrap;
@@ -200,9 +202,9 @@
   .alert {
     display: flex;
     align-items: center;
-    gap: calc(var(--u) * 1.6);
+    gap: calc(var(--u) * 1.4);
     border-radius: var(--radius);
-    padding: calc(var(--u) * 0.9) calc(var(--u) * 1.8);
+    padding: calc(var(--u) * 0.9) calc(var(--u) * 1.5);
     border: 1px solid;
   }
   .alert__icon { font-size: calc(var(--u) * 3.4); line-height: 1; flex: 0 0 auto; }
@@ -313,9 +315,9 @@
     padding: calc(var(--u) * 1.4) calc(var(--u) * 2.2);
   }
   .current__top { display: flex; align-items: center; gap: calc(var(--u) * 1.4); }
-  .current__icon { font-size: calc(var(--u) * 7.2); line-height: 1; flex: 0 0 auto; }
+  .current__icon { font-size: calc(var(--u) * 8.2); line-height: 1; flex: 0 0 auto; }
   .current__temp {
-    font-size: calc(var(--u) * 8.8);
+    font-size: calc(var(--u) * 10);
     font-weight: 700;
     line-height: 0.8;
     letter-spacing: -0.04em;
@@ -367,7 +369,7 @@
   .dash--radar .stat--minor { display: none; }
   .dash--radar .current__grid { display: flex; justify-content: space-between; grid-gap: 0; gap: calc(var(--u) * 1.2); }
   .dash--radar .stat { flex: 0 1 auto; }
-  .dash--radar .stat__value { font-size: calc(var(--u) * 3.9); }
+  .dash--radar .stat__value { font-size: var(--fs-xl); }
   .dash--noradar .stat--feels { display: none; }
   .current-panel.no-dir .wind-dir { display: none; }
   /* size levels, biggest first; fitCurrent() picks the first one that fits.
@@ -375,54 +377,44 @@
   .current-panel.wl .stat--minor { display: none; }
   .dash--noradar .current-panel.wl-1 .current__icon { font-size: calc(var(--u) * 7); }
   .dash--noradar .current-panel.wl-1 .current__temp { font-size: calc(var(--u) * 9.6); }
-  .dash--noradar .current-panel.wl-1 .current__cond { font-size: calc(var(--u) * 3.4); }
-  .dash--noradar .current-panel.wl-1 .current__feels span { font-size: calc(var(--u) * 4); }
+  .dash--noradar .current-panel.wl-1 .current__cond { font-size: var(--fs-xl); }
+  .dash--noradar .current-panel.wl-1 .current__feels span { font-size: var(--fs-xl); }
   .dash--noradar .current-panel.wl-1 .current__grid { margin-top: calc(var(--u) * 1.4); }
-  .dash--noradar .current-panel.wl-1 .stat__label { font-size: calc(var(--u) * 2.6); }
-  .dash--noradar .current-panel.wl-1 .stat__value { font-size: calc(var(--u) * 3.9); }
+  .dash--noradar .current-panel.wl-1 .stat__label { font-size: var(--fs-m); }
+  .dash--noradar .current-panel.wl-1 .stat__value { font-size: var(--fs-xl); }
   .dash--noradar .current-panel.wl-2 .current__icon { font-size: calc(var(--u) * 5.8); }
   .dash--noradar .current-panel.wl-2 .current__temp { font-size: calc(var(--u) * 7.6); }
-  .dash--noradar .current-panel.wl-2 .current__cond { font-size: calc(var(--u) * 3); }
+  .dash--noradar .current-panel.wl-2 .current__cond { font-size: var(--fs-l); }
   .dash--noradar .current-panel.wl-2 .current__feels { font-size: var(--fs-m); }
-  .dash--noradar .current-panel.wl-2 .current__feels span { font-size: calc(var(--u) * 3.3); }
+  .dash--noradar .current-panel.wl-2 .current__feels span { font-size: var(--fs-l); }
   .dash--noradar .current-panel.wl-2 .stat__label { font-size: var(--fs-m); }
-  .dash--noradar .current-panel.wl-2 .stat__value { font-size: calc(var(--u) * 3.9); }
+  .dash--noradar .current-panel.wl-2 .stat__value { font-size: var(--fs-xl); }
   /* radar view, a bit less room: a little smaller, same layout */
-  .dash--radar .current-panel.wl-1 .current__icon { font-size: calc(var(--u) * 6.6); }
-  .dash--radar .current-panel.wl-1 .current__temp { font-size: calc(var(--u) * 8.4); }
-  .dash--radar .current-panel.wl-1 .current__cond { font-size: calc(var(--u) * 3.1); }
-  .dash--radar .current-panel.wl-1 .stat__label { font-size: var(--fs-s); }
-  .dash--radar .current-panel.wl-1 .stat__value { font-size: calc(var(--u) * 3.9); }
-  .dash--radar .current-panel.wl-2 .current__icon { font-size: calc(var(--u) * 6); }
-  .dash--radar .current-panel.wl-2 .current__temp { font-size: calc(var(--u) * 7.8); }
+  .dash--radar .current-panel.wl-1 .current__icon { font-size: calc(var(--u) * 7.4); }
+  .dash--radar .current-panel.wl-1 .current__temp { font-size: calc(var(--u) * 9.2); }
+  .dash--radar .current-panel.wl-1 .current__cond { font-size: var(--fs-l); }
+  .dash--radar .current-panel.wl-2 .current__icon { font-size: calc(var(--u) * 6.4); }
+  .dash--radar .current-panel.wl-2 .current__temp { font-size: calc(var(--u) * 8); }
   .dash--radar .current-panel.wl-2 .current__cond { font-size: var(--fs-l); }
   .dash--radar .current-panel.wl-2 .current__grid { margin-top: calc(var(--u) * 0.6); }
   .dash--radar .current-panel.wl-2 .stat__label { font-size: var(--fs-s); }
-  .dash--radar .current-panel.wl-2 .stat__value { font-size: calc(var(--u) * 3.5); }
-  /* radar view, short panel (a warning is showing): "Tuntuu kuin" moves next to the condition */
-  .dash--radar .current-panel.wl-3 .current__top { flex-wrap: nowrap; }
-  .dash--radar .current-panel.wl-3 .current__txt { flex: 1 1 0; margin-top: 0; }
-  .dash--radar .current-panel.wl-3 .current__feels { display: block; }
-  .dash--radar .current-panel.wl-3 .stat--feels { display: none; }
-  .dash--radar .current-panel.wl-3 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
-  .dash--radar .current-panel.wl-4 .current__top { flex-wrap: nowrap; }
-  .dash--radar .current-panel.wl-4 .current__txt { flex: 1 1 0; margin-top: 0; }
-  .dash--radar .current-panel.wl-4 .current__feels { display: block; }
-  .dash--radar .current-panel.wl-4 .stat--feels { display: none; }
-  .dash--radar .current-panel.wl-4 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
-  .dash--radar .current-panel.wl-5 .current__top { flex-wrap: nowrap; }
-  .dash--radar .current-panel.wl-5 .current__txt { flex: 1 1 0; margin-top: 0; }
-  .dash--radar .current-panel.wl-5 .current__feels { display: block; }
-  .dash--radar .current-panel.wl-5 .stat--feels { display: none; }
-  .dash--radar .current-panel.wl-5 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
-  .dash--radar .current-panel.wl-6 .current__top { flex-wrap: nowrap; }
-  .dash--radar .current-panel.wl-6 .current__txt { flex: 1 1 0; margin-top: 0; }
-  .dash--radar .current-panel.wl-6 .current__feels { display: block; }
-  .dash--radar .current-panel.wl-6 .stat--feels { display: none; }
-  .dash--radar .current-panel.wl-6 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
-  /* short panel (a warning is showing): label and value of wind and gusts side by side */
+  /* radar view, short panel (a warning is showing): "Tuntuu kuin" moves next to the condition,
+     label and value of wind and gusts side by side */
+  .dash--radar .current-panel.wl-3 .current__top, .dash--radar .current-panel.wl-4 .current__top,
+  .dash--radar .current-panel.wl-5 .current__top, .dash--radar .current-panel.wl-6 .current__top { flex-wrap: nowrap; }
+  .dash--radar .current-panel.wl-3 .current__txt, .dash--radar .current-panel.wl-4 .current__txt,
+  .dash--radar .current-panel.wl-5 .current__txt, .dash--radar .current-panel.wl-6 .current__txt { flex: 1 1 0; margin-top: 0; }
+  .dash--radar .current-panel.wl-3 .current__feels, .dash--radar .current-panel.wl-4 .current__feels,
+  .dash--radar .current-panel.wl-5 .current__feels, .dash--radar .current-panel.wl-6 .current__feels { display: block; }
+  .dash--radar .current-panel.wl-3 .stat--feels, .dash--radar .current-panel.wl-4 .stat--feels,
+  .dash--radar .current-panel.wl-5 .stat--feels, .dash--radar .current-panel.wl-6 .stat--feels { display: none; }
+  .dash--radar .current-panel.wl-3 .current__grid, .dash--radar .current-panel.wl-4 .current__grid,
+  .dash--radar .current-panel.wl-5 .current__grid { display: grid; grid-template-columns: auto auto; justify-content: space-between; }
+  .dash--radar .current-panel.wl-3, .dash--radar .current-panel.wl-4, .dash--radar .current-panel.wl-5 {
+    padding-left: calc(var(--u) * 1.3); padding-right: calc(var(--u) * 1.3);
+  }
   .current-panel.wl-3 .stat, .current-panel.wl-4 .stat, .current-panel.wl-5 .stat {
-    flex-direction: row; align-items: baseline; gap: calc(var(--u) * 0.8); white-space: nowrap;
+    flex-direction: row; align-items: baseline; gap: calc(var(--u) * 0.6); white-space: nowrap;
   }
   .current-panel.wl-3 .current__grid, .current-panel.wl-4 .current__grid, .current-panel.wl-5 .current__grid {
     grid-gap: 0 calc(var(--u) * 1.2);
@@ -434,23 +426,23 @@
   .current-panel.wl-3 .current__feels span { display: inline; font-size: calc(var(--u) * 3.3); }
   .current-panel.wl-3 .current__grid { margin-top: calc(var(--u) * 0.5); }
   .current-panel.wl-3 .stat__label { font-size: var(--fs-s); }
-  .current-panel.wl-3 .stat__value { font-size: calc(var(--u) * 3.9); }
+  .current-panel.wl-3 .stat__value { font-size: var(--fs-xl); }
   .current-panel.wl-4 .current__icon { font-size: calc(var(--u) * 5); }
   .current-panel.wl-4 .current__temp { font-size: calc(var(--u) * 6.4); }
   .current-panel.wl-4 .current__cond { font-size: var(--fs-m); }
   .current-panel.wl-4 .current__feels { font-size: var(--fs-s); margin-top: calc(var(--u) * 0.1); }
-  .current-panel.wl-4 .current__feels span { display: inline; font-size: calc(var(--u) * 3); }
+  .current-panel.wl-4 .current__feels span { display: inline; font-size: var(--fs-l); }
   .current-panel.wl-4 .current__grid { margin-top: calc(var(--u) * 0.4); }
   .current-panel.wl-4 .stat__label { font-size: var(--fs-s); }
   .current-panel.wl-4 .stat__value { font-size: calc(var(--u) * 3.4); }
   .current-panel.wl-5 .current__icon { font-size: calc(var(--u) * 4.6); }
   .current-panel.wl-5 .current__temp { font-size: calc(var(--u) * 6); }
   .current-panel.wl-5 .current__cond { font-size: var(--fs-m); }
-  .current-panel.wl-5 .current__feels { font-size: var(--fs-xs); margin-top: calc(var(--u) * 0.1); }
-  .current-panel.wl-5 .current__feels span { display: inline; font-size: calc(var(--u) * 2.8); }
+  .current-panel.wl-5 .current__feels { font-size: var(--fs-s); margin-top: calc(var(--u) * 0.1); }
+  .current-panel.wl-5 .current__feels span { display: inline; font-size: var(--fs-l); }
   .current-panel.wl-5 .current__grid { margin-top: calc(var(--u) * 0.3); }
-  .current-panel.wl-5 .stat__label { font-size: var(--fs-xs); }
-  .current-panel.wl-5 .stat__value { font-size: calc(var(--u) * 3.1); }
+  .current-panel.wl-5 .stat__label { font-size: var(--fs-s); }
+  .current-panel.wl-5 .stat__value { font-size: var(--fs-l); }
   /* last resort (very short screen): wind and gusts give way */
   .current-panel.wl-6 .current__temp { font-size: calc(var(--u) * 6.4); }
   .current-panel.wl-6 .current__icon { font-size: calc(var(--u) * 4.8); }
@@ -468,7 +460,7 @@
   .dash--radar .elec-panel {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "now chart facts";
-    height: calc(var(--u) * 19.5);
+    height: calc(var(--u) * 20.2);
   }
   .dash--noradar .elec-panel {
     grid-template-columns: auto minmax(0, 1fr);
@@ -487,7 +479,7 @@
   .elec-now__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; }
   .elec-now__price {
     font-family: var(--num);
-    font-size: calc(var(--u) * 7.2);
+    font-size: calc(var(--u) * 6.9);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.03em;
@@ -499,7 +491,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4em;
-    margin-top: calc(var(--u) * 0.6);
+    margin-top: calc(var(--u) * 0.3);
     font-size: var(--fs-m);
     font-weight: 600;
     white-space: nowrap;
@@ -508,29 +500,21 @@
   .level--cheap i { background: var(--p-cheap); }
   .level--high i { background: var(--p-high); }
   .level--vhigh i { background: var(--p-vhigh); }
-  .elec-now__note { font-size: var(--fs-xs); color: var(--muted-dim); margin-top: calc(var(--u) * 0.4); white-space: nowrap; }
+  .elec-now__note { font-size: var(--fs-xs); color: var(--muted-dim); margin-top: calc(var(--u) * 0.2); white-space: nowrap; }
 
-  .fact__label { font-size: var(--fs-m); color: var(--muted); font-weight: 500; white-space: nowrap; }
-  .fact__value { font-size: var(--fs-3xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
+  .fact__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; line-height: 1.15; }
+  .fact__value { font-size: calc(var(--u) * 5.2); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
   .fact__value .unit { font-family: 'Inter', sans-serif; }
-  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-l); color: var(--muted); font-weight: 500; display: block; white-space: nowrap; margin-top: calc(var(--u) * 0.2); }
-  .fact__also b { color: var(--text); font-weight: 600; }
-  .fact__label .mark-best {
-    display: inline-block;
-    width: 1.2em;
-    height: 4px;
-    border-radius: 2px;
-    background: var(--text);
-    vertical-align: 0.25em;
-    margin-left: 0.4em;
-  }
+  .fact__also { font-family: var(--num); font-size: var(--fs-xl); color: var(--text); font-weight: 600; line-height: 1.1; white-space: nowrap; margin-top: calc(var(--u) * 0.3); }
+  .fact__also .fact__unit { font-family: 'Inter', sans-serif; font-size: var(--fs-m); color: var(--muted); font-weight: 500; margin-left: 0.25em; }
+  .dash--radar .elec-facts { max-width: calc(var(--u) * 17.5); }
   .dash--noradar .elec-facts { flex-direction: row; justify-content: space-between; flex-wrap: wrap; gap: calc(var(--u) * 1) calc(var(--u) * 2.4); }
 
   /* the bar chart: today (and tomorrow from about 14:00) */
   .chart { display: flex; gap: calc(var(--u) * 1.6); height: 100%; }
   .cg { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-  .cg__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; white-space: nowrap; line-height: calc(var(--fs-s) * 1.2); }
-  .cg__label b { color: var(--text); font-weight: 600; font-size: var(--fs-s); margin-right: 0.35em; }
+  .cg__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; white-space: nowrap; line-height: 1.12; }
+  .cg__label b { display: block; color: var(--text); font-weight: 600; font-size: var(--fs-m); }
   /* y axis: price steps, left of the bars */
   .yax { flex: 0 0 auto; display: flex; flex-direction: column; margin-right: calc(var(--u) * -0.8); }
   .yax .cg__label { visibility: hidden; }
@@ -562,17 +546,10 @@
   .b--cheap i { background: var(--p-cheap); }
   .b--high i { background: var(--p-high); }
   .b--vhigh i { background: var(--p-vhigh); }
-  .b.is-past i { opacity: 0.32; }
   .b.is-now i { box-shadow: 0 0 0 2px var(--text); }
-  /* cheapest 3 h: a white line under the bars */
-  .best-line {
-    position: absolute;
-    bottom: calc(var(--u) * -1.1);
-    height: 4px;
-    border-radius: 2px;
-    background: var(--text);
-  }
-  .cg__axis { position: relative; height: calc(var(--fs-s) * 1.2); margin-top: calc(var(--u) * 1.4); }
+  .cg__divider { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed rgba(157,175,207,0.4); pointer-events: none; }
+  .cg__wait--abs { position: absolute; right: 0; top: 0; bottom: 0; margin: 0; flex: none; }
+  .cg__axis { position: relative; height: calc(var(--fs-s) * 1.2); margin-top: calc(var(--u) * 0.6); }
   .cg__axis span {
     position: absolute;
     top: 0;
@@ -630,7 +607,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: calc(var(--u) * 0.5) 0 calc(var(--u) * 0.6);
+    padding: calc(var(--u) * 0.3) 0 calc(var(--u) * 0.3);
     border-radius: calc(var(--u) * 1.1);
   }
   .strip-item.is-now {
@@ -639,15 +616,16 @@
   }
   .strip-item__label { font-size: var(--fs-s); font-weight: 500; color: var(--muted); white-space: nowrap; }
   .is-now .strip-item__label { color: var(--text); font-weight: 600; }
-  .strip-item__icon { font-size: calc(var(--u) * 3.6); margin: calc(var(--u) * 0.3) 0 calc(var(--u) * 0.2); }
+  .strip-item__icon { font-size: calc(var(--u) * 3.3); margin: calc(var(--u) * 0.2) 0 calc(var(--u) * 0.1); }
   .strip-item__temp {
     font-family: var(--num);
     font-size: var(--fs-2xl);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.03em;
     font-weight: 600;
     line-height: 1.05;
     white-space: nowrap;
   }
+  .strip--long .strip-item__temp { font-size: calc(var(--u) * 3.4); }
   .strip-item__min { font-family: var(--num); font-size: var(--fs-l); color: var(--muted-dim); font-weight: 500; line-height: 1.1; white-space: nowrap; }
   .strip-item__pop {
     display: flex;
@@ -665,7 +643,7 @@
     line-height: 1;
     min-height: var(--fs-xs);
   }
-  .pop-bar {
+  .pop-bar { display: none;
     width: 56%;
     height: calc(var(--u) * 0.4);
     border-radius: 2px;
@@ -770,9 +748,9 @@
       <div class="elec-chart" id="priceChart"><div class="elec-error">Sähkön hinnat latautuvat&hellip;</div></div>
       <div class="elec-facts" id="priceFacts"></div>
       <div class="elec-legend" aria-hidden="true">
-        <span><i style="background:var(--p-cheap)"></i>alle 5 snt</span>
-        <span><i style="background:var(--p-normal)"></i>5&ndash;10 snt</span>
-        <span><i style="background:var(--p-high)"></i>10&ndash;20 snt</span>
+        <span><i style="background:var(--p-cheap)"></i>alle 5</span>
+        <span><i style="background:var(--p-normal)"></i>5&ndash;10</span>
+        <span><i style="background:var(--p-high)"></i>10&ndash;20</span>
         <span><i style="background:var(--p-vhigh)"></i>yli 20 snt</span>
       </div>
     </section>
@@ -793,7 +771,7 @@
 (function(){
 
   /* ================= SETTINGS ================= */
-  var VERSION = '1.6';
+  var VERSION = '2.1';
   // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
   // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
   var SHOW_RADAR = true;
@@ -1358,9 +1336,9 @@
     }
     var wet = sum(hourly.precipitation, i0 - 12, i0 + 6) >= 0.3;
     var crossesZero = tmin <= 0 && tmax >= 0;
-    if (freezing) alertState.slippery = { title: 'Jäätävää sadetta', sub: 'Erittäin liukasta, varo pihalla' };
-    else if (rainCold) alertState.slippery = { title: 'Liukasta', sub: 'Vettä jäiseen maahan, varo pihalla' };
-    else if (wet && crossesZero) alertState.slippery = { title: 'Liukasta', sub: 'Varo pihalla ja portailla' };
+    if (freezing) alertState.slippery = { title: 'Jäätävää sadetta', sub: 'Erittäin liukasta' };
+    else if (rainCold) alertState.slippery = { title: 'Liukasta', sub: 'Vettä jäiseen maahan' };
+    else if (wet && crossesZero) alertState.slippery = { title: 'Liukasta', sub: 'Varo portailla' };
     else alertState.slippery = null;
 
     var snowCm = sum(hourly.snowfall, i0, i0 + 24);
@@ -1414,6 +1392,15 @@
     return obj.year + '-' + obj.month + '-' + obj.day + 'T' + hh;
   }
 
+  // four-character temperatures (e.g. -12°) get a slightly smaller size in that strip, so neighbours never touch
+  function markLongTemps(){
+    var ids = ['hourlyStrip', 'dailyStrip'];
+    for (var i = 0; i < ids.length; i++){
+      var strip = document.getElementById(ids[i]), temps = strip.querySelectorAll('.strip-item__temp'), long = false;
+      for (var j = 0; j < temps.length; j++) if (temps[j].textContent.length >= 4) long = true;
+      if (long) strip.classList.add('strip--long'); else strip.classList.remove('strip--long');
+    }
+  }
   var HOURLY_ITEMS = 6, HOURLY_STEP = 2, DAILY_ITEMS = 5;
   var DAY_NAMES = ['Su','Ma','Ti','Ke','To','Pe','La'];
 
@@ -1447,7 +1434,7 @@
       var info = wmoInfo(hourly.weather_code[j], isDayAt(t) ? 1 : 0);
       html += hourItem(n === 0, t, info[0], hourly.temperature_2m[j], hourly.precipitation_probability[j]);
     }
-    document.getElementById('hourlyStrip').innerHTML = html;
+    document.getElementById('hourlyStrip').innerHTML = html; markLongTemps();
   }
   function renderDaily(daily, first){
     var html = '';
@@ -1455,7 +1442,7 @@
       var i = first + n;
       html += dayItem(daily.time[i], wmoInfo(daily.weather_code[i], 1)[0], daily.temperature_2m_max[i], daily.temperature_2m_min[i], daily.precipitation_probability_max[i]);
     }
-    document.getElementById('dailyStrip').innerHTML = html;
+    document.getElementById('dailyStrip').innerHTML = html; markLongTemps();
   }
 
   // "Päivän pituus 6 h 46 min (−4 min)"
@@ -1508,16 +1495,24 @@
       panel.classList.add('no-dir');
       return !overflows();
     }
-    clearLevels();
-    dashEl.classList.remove('is-tight');
-    // level 0 = biggest; then level by level until it fits
-    for (var level = 1; !fits() && level <= LEVELS; level++){
-      clearLevels();
-      panel.classList.add('wl', 'wl-' + level);
-    }
-    // still too little room (several warnings on a short screen): slimmer forecast strips
     var elec = document.querySelector('.elec-panel');
-    if (overflows() || elec.scrollHeight > elec.clientHeight + 1) dashEl.classList.add('is-tight');
+    // try the levels one by one, biggest first; true = something fits
+    function ladder(maxLevel){
+      clearLevels();
+      for (var level = 0; level <= maxLevel; level++){
+        if (level > 0) { clearLevels(); panel.classList.add('wl', 'wl-' + level); }
+        if (fits()) return true;
+      }
+      return false;
+    }
+    dashEl.classList.remove('is-tight');
+    // 1) all four rain-chance bars stay, 2) a short panel (warning showing): rain chances in the
+    // forecast strips give way, and the weather panel gets their room
+    var okFirst = ladder(3) && elec.scrollHeight <= elec.clientHeight + 1;
+    if (!okFirst) {
+      dashEl.classList.add('is-tight');
+      ladder(LEVELS);
+    }
   }
   window.addEventListener('resize', fitCurrent);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCurrent);
@@ -1602,7 +1597,7 @@
       html += hourItem(n === 0, d, nightify(fmiSymbolIcon(e.WeatherSymbol3), isDayAt(d)), e.Temperature,
         typeof e.PoP === 'number' ? Math.round(e.PoP) : null);
     }
-    document.getElementById('hourlyStrip').innerHTML = html;
+    document.getElementById('hourlyStrip').innerHTML = html; markLongTemps();
   }
   function renderDailyFmi(byTime, times){
     var byDay = {}, order = [];
@@ -1624,7 +1619,7 @@
       html += dayItem(order[k], fmiSymbolIcon(day.symbol), Math.max.apply(null, day.temps), Math.min.apply(null, day.temps),
         day.pops.length ? Math.round(Math.max.apply(null, day.pops)) : null);
     }
-    document.getElementById('dailyStrip').innerHTML = html;
+    document.getElementById('dailyStrip').innerHTML = html; markLongTemps();
   }
   function loadFmiForecastStrips(){
     var end = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -1735,12 +1730,6 @@
     return (h1 < 10 ? '0' : '') + h1 + '–' + (h2 < 10 ? '0' : '') + h2;
   }
   function dayWord(key){ return key === helsinkiDateKey(new Date()) ? 'tänään' : key === tomorrowKey() ? 'huomenna' : ''; }
-  function avgOf(list, key){
-    var sum = 0, n = 0;
-    for (var i = 0; i < list.length; i++) if (list[i].key === key) { sum += list[i].p; n++; }
-    return n >= 20 ? sum / n : null;    // only for a (nearly) full day
-  }
-
   function renderPrice(){
     var now = Date.now();
     var nowEl = document.getElementById('priceNow'), lvlEl = document.getElementById('priceLevel');
@@ -1776,12 +1765,16 @@
 
     // cheapest 3 h from now on
     var best = cheapestBlock(list, 3, hourNow);
-    var bestHours = {};
-    if (best) for (var b = 0; b < 3; b++) bestHours[best.start.t + b * 60 * 60 * 1000] = true;
 
-    // chart: today, and tomorrow when published
+    // chart: the next 24 hours from this hour on, one row of bars (no past hours, no day split)
+    var HOUR_MS = 60 * 60 * 1000, byT = {}, shown = [], lastHave = -1, n, k;
+    for (k = 0; k < list.length; k++) byT[list[k].t] = list[k];
     var maxP = PRICE_HIGH;
-    for (var m = 0; m < list.length; m++) if ((list[m].key === todayK || list[m].key === tomK) && list[m].p > maxP) maxP = list[m].p;
+    for (n = 0; n < 24; n++){
+      var itn = byT[hourNow + n * HOUR_MS] || null;
+      shown.push(itn);
+      if (itn) { lastHave = n; if (itn.p > maxP) maxP = itn.p; }
+    }
     // 2-3 gridlines: 10/20, 20/40/60...
     var steps = [5, 10, 20, 50, 100, 200], step = 5, top = 10;
     for (var si = 0; si < steps.length; si++){
@@ -1789,42 +1782,32 @@
       top = Math.ceil(maxP / step) * step;
       if (top / step <= 3) break;
     }
-    function group(key, label, withGrid){
-      var have = 0, bars = '', bestFrom = -1, bestTo = -1;
-      for (var h = 0; h < 24; h++){
-        var it = hp.byKey[key + '|' + h];
-        if (!it) { bars += '<div class="b"></div>'; continue; }
-        have++;
-        var pct = Math.max(0, it.p) / top * 100;
-        var cls = 'b b--' + levelOf(it.p) + (it.t < hourNow ? ' is-past' : '') + (it.t === hourNow ? ' is-now' : '');
-        if (bestHours[it.t]) { if (bestFrom < 0) bestFrom = h; bestTo = h + 1; }
-        bars += '<div class="' + cls + '"><i style="height:' + pct.toFixed(1) + '%"></i></div>';
-      }
-      var avg = avgOf(list, key);
-      var head = '<div class="cg__label"><b>' + label + '</b>' + (avg !== null ? 'keskim. ' + fmtCents(avg) : '') + '</div>';
-      if (!have) {
-        return '<div class="cg">' + head + '<div class="cg__wait">Huomisen hinnat tulevat noin klo 14</div><div class="cg__axis"></div></div>';
-      }
-      var grid = '';
-      if (withGrid) {
-        for (var g = step; g <= top; g += step) {
-          grid += '<div class="cg__grid" style="bottom:' + (g / top * 100).toFixed(1) + '%"></div>';
-        }
-      }
-      var axis = '<div class="cg__axis"><span style="left:0">0</span><span style="left:25%">6</span><span style="left:50%">12</span><span style="left:75%">18</span></div>';
-      if (bestFrom >= 0) bars += '<div class="best-line" style="left:' + (bestFrom / 24 * 100).toFixed(2) + '%;width:' + ((bestTo - bestFrom) / 24 * 100).toFixed(2) + '%"></div>';
-      return '<div class="cg">' + head + '<div class="cg__bars">' + grid + bars + '</div>' + axis + '</div>';
+    var bars = '', grid = '', axis = '', wait = '';
+    for (n = 0; n < 24; n++){
+      var it = shown[n];
+      if (!it) { bars += '<div class="b"></div>'; continue; }
+      var pct = Math.max(0, it.p) / top * 100;
+      bars += '<div class="b b--' + levelOf(it.p) + (n === 0 ? ' is-now' : '') + '"><i style="height:' + pct.toFixed(1) + '%"></i></div>';
+      if (it.h === 0 && n > 0) grid += '<div class="cg__divider" style="left:' + (n / 24 * 100).toFixed(2) + '%"></div>';
+      if (n >= 4 && it.h % 6 === 0) axis += '<span style="left:' + (n / 24 * 100).toFixed(2) + '%">' + (it.h < 10 ? '0' : '') + it.h + '</span>';
     }
-    var yax = '<div class="yax"><div class="cg__label"><b>&nbsp;</b></div><div class="yax__scale">';
-    for (var y = 0; y <= top; y += step) yax += '<span style="bottom:' + (y / top * 100).toFixed(1) + '%">' + y + '</span>';
+    if (shown[0]) axis = '<span style="left:0">Nyt</span>' + axis;
+    for (var g = step; g <= top; g += step) {
+      grid += '<div class="cg__grid" style="bottom:' + (g / top * 100).toFixed(1) + '%"></div>';
+    }
+    // tomorrow's prices are not out yet: say so where the bars would be
+    if (lastHave < 23) wait = '<div class="cg__wait cg__wait--abs" style="left:' + ((lastHave + 1) / 24 * 100).toFixed(2) + '%">Huomisen hinnat tulevat noin klo 14</div>';
+    var yax = '<div class="yax"><div class="cg__label">&nbsp;</div><div class="yax__scale">';
+    for (var y = 0; y <= top; y += step) if ((y / step) % 2 === 0) yax += '<span style="bottom:' + (y / top * 100).toFixed(1) + '%">' + y + '</span>';
     yax += '</div><div class="cg__axis"></div></div>';
-    chartEl.innerHTML = '<div class="chart">' + yax + group(todayK, 'Tänään', true) + group(tomK, 'Huomenna', true) + '</div>';
+    chartEl.innerHTML = '<div class="chart">' + yax + '<div class="cg"><div class="cg__label">Seuraavat tunnit</div>' +
+      '<div class="cg__bars">' + grid + bars + wait + '</div><div class="cg__axis">' + axis + '</div></div></div>';
 
     var facts = '';
     if (best) {
-      facts += '<div class="fact"><div class="fact__label">Halvin 3 h ' + dayWord(best.start.key) + '<span class="mark-best"></span></div>' +
+      facts += '<div class="fact"><div class="fact__label">Halvin 3 h ' + dayWord(best.start.key) + '</div>' +
         '<div class="fact__value">' + blockText(best) + '</div>' +
-        '<div class="fact__also">keskim. <b>' + fmtCents(best.avg) + '</b> snt</div></div>';
+        '<div class="fact__also">' + fmtCents(best.avg) + '<span class="fact__unit">snt</span></div></div>';
     }
     factsEl.innerHTML = facts;
   }
