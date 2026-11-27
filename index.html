@@ -46,6 +46,7 @@
     --fs-l:   calc(var(--u) * 2.7);
     --fs-xl:  calc(var(--u) * 3.1);
     --fs-2xl: calc(var(--u) * 3.6);
+    --fs-3xl: calc(var(--u) * 4.5);
   }
 
   * { box-sizing: border-box; }
@@ -233,7 +234,7 @@
     grid-gap: var(--gap);
   }
   .dash--radar .dash__body {
-    grid-template-columns: 1.45fr 1fr;
+    grid-template-columns: 1.35fr 1fr;
     grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas: "radar current" "elec elec";
   }
@@ -312,17 +313,18 @@
     padding: calc(var(--u) * 1.4) calc(var(--u) * 2.2);
   }
   .current__top { display: flex; align-items: center; gap: calc(var(--u) * 1.4); }
-  .current__icon { font-size: calc(var(--u) * 7.6); line-height: 1; flex: 0 0 auto; }
+  .current__icon { font-size: calc(var(--u) * 7.2); line-height: 1; flex: 0 0 auto; }
   .current__temp {
-    font-size: calc(var(--u) * 10.2);
+    font-size: calc(var(--u) * 8.8);
     font-weight: 700;
     line-height: 0.8;
     letter-spacing: -0.04em;
     white-space: nowrap;
   }
-  .current__cond { font-size: var(--fs-l); font-weight: 600; line-height: 1.15; margin-top: calc(var(--u) * 0.6); }
-  .current__feels { font-size: var(--fs-m); color: var(--muted); margin-top: calc(var(--u) * 0.25); }
-  .current__feels span { color: var(--text); font-weight: 700; }
+  .current__txt { flex: 1 1 0; min-width: 0; }
+  .current__cond { font-size: var(--fs-xl); font-weight: 600; line-height: 1.1; }
+  .current__feels { font-size: var(--fs-l); color: var(--muted); margin-top: calc(var(--u) * 0.5); line-height: 1.1; }
+  .current__feels span { display: block; color: var(--text); font-weight: 700; font-size: var(--fs-2xl); line-height: 1.05; }
   .current__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -330,8 +332,8 @@
     margin-top: calc(var(--u) * 1);
   }
   .stat { display: flex; flex-direction: column; gap: calc(var(--u) * 0.15); min-width: 0; }
-  .stat__label { font-size: var(--fs-s); font-weight: 500; color: var(--muted-dim); }
-  .stat__value { font-size: var(--fs-xl); font-weight: 600; line-height: 1.05; white-space: nowrap; }
+  .stat__label { font-size: var(--fs-m); font-weight: 500; color: var(--muted-dim); }
+  .stat__value { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.05; white-space: nowrap; }
   .unit { font-size: 0.6em; font-weight: 500; color: var(--muted); margin-left: 0.15em; }
   .unit--tight { margin-left: 0.02em; }
   .wind-arrow {
@@ -352,12 +354,110 @@
   /* short panel (a warning is showing, or a smaller screen): drop bits step by step */
   .dash--noradar .current__temp { font-size: calc(var(--u) * 12.5); }
   .dash--noradar .current__icon { font-size: calc(var(--u) * 9); }
-  .dash--noradar .current__cond { font-size: var(--fs-xl); margin-top: calc(var(--u) * 1); }
+  .dash--noradar .current__top { flex-wrap: wrap; }
+  .dash--noradar .current__txt { flex: 1 0 100%; margin-top: calc(var(--u) * 0.8); }
+  .dash--noradar .current__cond { font-size: var(--fs-xl); }
   .dash--noradar .current__feels { font-size: var(--fs-l); }
-  .current-panel.compact-1 .current__temp { font-size: calc(var(--u) * 8.4); }
-  .current-panel.compact-1 .current__icon { font-size: calc(var(--u) * 6.4); }
-  .current-panel.compact-2 .stat--minor { display: none; }
-  .current-panel.compact-3 .current__grid { display: none; }
+  /* with the radar: temperature, condition below it, and "Tuntuu kuin", wind and gusts side by side
+     in one row (uses the width). Humidity and pressure are only shown without the radar. */
+  .dash--radar .current-panel { padding-left: calc(var(--u) * 1.9); padding-right: calc(var(--u) * 1.9); }
+  .dash--radar .current__top { flex-wrap: wrap; }
+  .dash--radar .current__txt { flex: 1 0 100%; margin-top: calc(var(--u) * 0.4); }
+  .dash--radar .current__feels { display: none; }
+  .dash--radar .stat--minor { display: none; }
+  .dash--radar .current__grid { display: flex; justify-content: space-between; grid-gap: 0; gap: calc(var(--u) * 1.2); }
+  .dash--radar .stat { flex: 0 1 auto; }
+  .dash--radar .stat__value { font-size: calc(var(--u) * 3.9); }
+  .dash--noradar .stat--feels { display: none; }
+  .current-panel.no-dir .wind-dir { display: none; }
+  /* size levels, biggest first; fitCurrent() picks the first one that fits.
+     (no radar: wl hides humidity and pressure first, the freed room goes to the rest) */
+  .current-panel.wl .stat--minor { display: none; }
+  .dash--noradar .current-panel.wl-1 .current__icon { font-size: calc(var(--u) * 7); }
+  .dash--noradar .current-panel.wl-1 .current__temp { font-size: calc(var(--u) * 9.6); }
+  .dash--noradar .current-panel.wl-1 .current__cond { font-size: calc(var(--u) * 3.4); }
+  .dash--noradar .current-panel.wl-1 .current__feels span { font-size: calc(var(--u) * 4); }
+  .dash--noradar .current-panel.wl-1 .current__grid { margin-top: calc(var(--u) * 1.4); }
+  .dash--noradar .current-panel.wl-1 .stat__label { font-size: calc(var(--u) * 2.6); }
+  .dash--noradar .current-panel.wl-1 .stat__value { font-size: calc(var(--u) * 3.9); }
+  .dash--noradar .current-panel.wl-2 .current__icon { font-size: calc(var(--u) * 5.8); }
+  .dash--noradar .current-panel.wl-2 .current__temp { font-size: calc(var(--u) * 7.6); }
+  .dash--noradar .current-panel.wl-2 .current__cond { font-size: calc(var(--u) * 3); }
+  .dash--noradar .current-panel.wl-2 .current__feels { font-size: var(--fs-m); }
+  .dash--noradar .current-panel.wl-2 .current__feels span { font-size: calc(var(--u) * 3.3); }
+  .dash--noradar .current-panel.wl-2 .stat__label { font-size: var(--fs-m); }
+  .dash--noradar .current-panel.wl-2 .stat__value { font-size: calc(var(--u) * 3.9); }
+  /* radar view, a bit less room: a little smaller, same layout */
+  .dash--radar .current-panel.wl-1 .current__icon { font-size: calc(var(--u) * 6.6); }
+  .dash--radar .current-panel.wl-1 .current__temp { font-size: calc(var(--u) * 8.4); }
+  .dash--radar .current-panel.wl-1 .current__cond { font-size: calc(var(--u) * 3.1); }
+  .dash--radar .current-panel.wl-1 .stat__label { font-size: var(--fs-s); }
+  .dash--radar .current-panel.wl-1 .stat__value { font-size: calc(var(--u) * 3.9); }
+  .dash--radar .current-panel.wl-2 .current__icon { font-size: calc(var(--u) * 6); }
+  .dash--radar .current-panel.wl-2 .current__temp { font-size: calc(var(--u) * 7.8); }
+  .dash--radar .current-panel.wl-2 .current__cond { font-size: var(--fs-l); }
+  .dash--radar .current-panel.wl-2 .current__grid { margin-top: calc(var(--u) * 0.6); }
+  .dash--radar .current-panel.wl-2 .stat__label { font-size: var(--fs-s); }
+  .dash--radar .current-panel.wl-2 .stat__value { font-size: calc(var(--u) * 3.5); }
+  /* radar view, short panel (a warning is showing): "Tuntuu kuin" moves next to the condition */
+  .dash--radar .current-panel.wl-3 .current__top { flex-wrap: nowrap; }
+  .dash--radar .current-panel.wl-3 .current__txt { flex: 1 1 0; margin-top: 0; }
+  .dash--radar .current-panel.wl-3 .current__feels { display: block; }
+  .dash--radar .current-panel.wl-3 .stat--feels { display: none; }
+  .dash--radar .current-panel.wl-3 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .dash--radar .current-panel.wl-4 .current__top { flex-wrap: nowrap; }
+  .dash--radar .current-panel.wl-4 .current__txt { flex: 1 1 0; margin-top: 0; }
+  .dash--radar .current-panel.wl-4 .current__feels { display: block; }
+  .dash--radar .current-panel.wl-4 .stat--feels { display: none; }
+  .dash--radar .current-panel.wl-4 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .dash--radar .current-panel.wl-5 .current__top { flex-wrap: nowrap; }
+  .dash--radar .current-panel.wl-5 .current__txt { flex: 1 1 0; margin-top: 0; }
+  .dash--radar .current-panel.wl-5 .current__feels { display: block; }
+  .dash--radar .current-panel.wl-5 .stat--feels { display: none; }
+  .dash--radar .current-panel.wl-5 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .dash--radar .current-panel.wl-6 .current__top { flex-wrap: nowrap; }
+  .dash--radar .current-panel.wl-6 .current__txt { flex: 1 1 0; margin-top: 0; }
+  .dash--radar .current-panel.wl-6 .current__feels { display: block; }
+  .dash--radar .current-panel.wl-6 .stat--feels { display: none; }
+  .dash--radar .current-panel.wl-6 .current__grid { display: grid; grid-template-columns: 1fr 1fr; }
+  /* short panel (a warning is showing): label and value of wind and gusts side by side */
+  .current-panel.wl-3 .stat, .current-panel.wl-4 .stat, .current-panel.wl-5 .stat {
+    flex-direction: row; align-items: baseline; gap: calc(var(--u) * 0.8); white-space: nowrap;
+  }
+  .current-panel.wl-3 .current__grid, .current-panel.wl-4 .current__grid, .current-panel.wl-5 .current__grid {
+    grid-gap: 0 calc(var(--u) * 1.2);
+  }
+  .current-panel.wl-3 .current__icon { font-size: calc(var(--u) * 5.4); }
+  .current-panel.wl-3 .current__temp { font-size: calc(var(--u) * 7); }
+  .current-panel.wl-3 .current__cond { font-size: var(--fs-l); }
+  .current-panel.wl-3 .current__feels { font-size: var(--fs-s); margin-top: calc(var(--u) * 0.2); }
+  .current-panel.wl-3 .current__feels span { display: inline; font-size: calc(var(--u) * 3.3); }
+  .current-panel.wl-3 .current__grid { margin-top: calc(var(--u) * 0.5); }
+  .current-panel.wl-3 .stat__label { font-size: var(--fs-s); }
+  .current-panel.wl-3 .stat__value { font-size: calc(var(--u) * 3.9); }
+  .current-panel.wl-4 .current__icon { font-size: calc(var(--u) * 5); }
+  .current-panel.wl-4 .current__temp { font-size: calc(var(--u) * 6.4); }
+  .current-panel.wl-4 .current__cond { font-size: var(--fs-m); }
+  .current-panel.wl-4 .current__feels { font-size: var(--fs-s); margin-top: calc(var(--u) * 0.1); }
+  .current-panel.wl-4 .current__feels span { display: inline; font-size: calc(var(--u) * 3); }
+  .current-panel.wl-4 .current__grid { margin-top: calc(var(--u) * 0.4); }
+  .current-panel.wl-4 .stat__label { font-size: var(--fs-s); }
+  .current-panel.wl-4 .stat__value { font-size: calc(var(--u) * 3.4); }
+  .current-panel.wl-5 .current__icon { font-size: calc(var(--u) * 4.6); }
+  .current-panel.wl-5 .current__temp { font-size: calc(var(--u) * 6); }
+  .current-panel.wl-5 .current__cond { font-size: var(--fs-m); }
+  .current-panel.wl-5 .current__feels { font-size: var(--fs-xs); margin-top: calc(var(--u) * 0.1); }
+  .current-panel.wl-5 .current__feels span { display: inline; font-size: calc(var(--u) * 2.8); }
+  .current-panel.wl-5 .current__grid { margin-top: calc(var(--u) * 0.3); }
+  .current-panel.wl-5 .stat__label { font-size: var(--fs-xs); }
+  .current-panel.wl-5 .stat__value { font-size: calc(var(--u) * 3.1); }
+  /* last resort (very short screen): wind and gusts give way */
+  .current-panel.wl-6 .current__temp { font-size: calc(var(--u) * 6.4); }
+  .current-panel.wl-6 .current__icon { font-size: calc(var(--u) * 4.8); }
+  .current-panel.wl-6 .current__cond { font-size: var(--fs-l); }
+  .current-panel.wl-6 .current__feels { font-size: var(--fs-s); }
+  .current-panel.wl-6 .current__feels span { display: inline; font-size: var(--fs-xl); }
+  .current-panel.wl-6 .current__grid { display: none; }
 
   /* ELECTRICITY */
   .elec-panel {
@@ -410,10 +510,11 @@
   .level--vhigh i { background: var(--p-vhigh); }
   .elec-now__note { font-size: var(--fs-xs); color: var(--muted-dim); margin-top: calc(var(--u) * 0.4); white-space: nowrap; }
 
-  .fact__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; white-space: nowrap; }
-  .fact__value { font-size: var(--fs-xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
+  .fact__label { font-size: var(--fs-m); color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .fact__value { font-size: var(--fs-3xl); font-weight: 600; line-height: 1.1; white-space: nowrap; font-family: var(--num); }
   .fact__value .unit { font-family: 'Inter', sans-serif; }
-  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-s); color: var(--muted); font-weight: 500; margin-left: 0.5em; }
+  .fact__also { font-family: 'Inter', sans-serif; font-size: var(--fs-l); color: var(--muted); font-weight: 500; display: block; white-space: nowrap; margin-top: calc(var(--u) * 0.2); }
+  .fact__also b { color: var(--text); font-weight: 600; }
   .fact__label .mark-best {
     display: inline-block;
     width: 1.2em;
@@ -428,12 +529,12 @@
   /* the bar chart: today (and tomorrow from about 14:00) */
   .chart { display: flex; gap: calc(var(--u) * 1.6); height: 100%; }
   .cg { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-  .cg__label { font-size: var(--fs-xs); color: var(--muted); font-weight: 500; white-space: nowrap; line-height: calc(var(--fs-s) * 1.2); }
+  .cg__label { font-size: var(--fs-s); color: var(--muted); font-weight: 500; white-space: nowrap; line-height: calc(var(--fs-s) * 1.2); }
   .cg__label b { color: var(--text); font-weight: 600; font-size: var(--fs-s); margin-right: 0.35em; }
   /* y axis: price steps, left of the bars */
   .yax { flex: 0 0 auto; display: flex; flex-direction: column; margin-right: calc(var(--u) * -0.8); }
   .yax .cg__label { visibility: hidden; }
-  .yax__scale { flex: 1 1 0; position: relative; margin-top: calc(var(--u) * 0.6); min-width: 1.4em; font-size: var(--fs-xs); }
+  .yax__scale { flex: 1 1 0; position: relative; margin-top: calc(var(--u) * 0.6); min-width: 1.4em; font-size: var(--fs-s); }
   .yax__scale span { position: absolute; right: 0; transform: translateY(50%); color: var(--muted-dim); line-height: 1; font-family: var(--num); }
   .cg__bars {
     flex: 1 1 0;
@@ -471,11 +572,11 @@
     border-radius: 2px;
     background: var(--text);
   }
-  .cg__axis { position: relative; height: calc(var(--fs-xs) * 1.2); margin-top: calc(var(--u) * 1.4); }
+  .cg__axis { position: relative; height: calc(var(--fs-s) * 1.2); margin-top: calc(var(--u) * 1.4); }
   .cg__axis span {
     position: absolute;
     top: 0;
-    font-size: var(--fs-xs);
+    font-size: var(--fs-s);
     color: var(--muted-dim);
     line-height: 1;
     transform: translateX(-50%);
@@ -501,7 +602,7 @@
     font-size: var(--fs-m);
     color: var(--amber);
   }
-  .elec-legend { gap: calc(var(--u) * 2.2); font-size: var(--fs-xs); color: var(--muted); align-items: center; }
+  .elec-legend { gap: calc(var(--u) * 2.2); font-size: var(--fs-s); color: var(--muted); align-items: center; }
   .elec-legend span { display: inline-flex; align-items: center; gap: 0.45em; white-space: nowrap; }
   .elec-legend i { display: inline-block; width: 0.85em; height: 0.85em; border-radius: 3px; }
 
@@ -541,13 +642,13 @@
   .strip-item__icon { font-size: calc(var(--u) * 3.6); margin: calc(var(--u) * 0.3) 0 calc(var(--u) * 0.2); }
   .strip-item__temp {
     font-family: var(--num);
-    font-size: var(--fs-xl);
+    font-size: var(--fs-2xl);
     letter-spacing: -0.01em;
     font-weight: 600;
     line-height: 1.05;
     white-space: nowrap;
   }
-  .strip-item__min { font-family: var(--num); font-size: var(--fs-m); color: var(--muted-dim); font-weight: 500; line-height: 1.1; white-space: nowrap; }
+  .strip-item__min { font-family: var(--num); font-size: var(--fs-l); color: var(--muted-dim); font-weight: 500; line-height: 1.1; white-space: nowrap; }
   .strip-item__pop {
     display: flex;
     flex-direction: column;
@@ -641,12 +742,15 @@
         <div class="current__top">
           <div class="current__icon" id="curIcon"><svg class="wi" viewBox="-1 -1 26 26"><path class="wi-cloud" d="M18 10h-1.26A8 8 0 1 0 9 20h9a4 4 0 0 0 0-8z"/></svg></div>
           <div class="current__temp num" id="curTemp">--&deg;</div>
+          <div class="current__txt">
+            <div class="current__cond" id="curCond">Säätiedot latautuvat&hellip;</div>
+            <div class="current__feels">Tuntuu kuin <span class="num" id="curFeels">--&deg;</span></div>
+          </div>
         </div>
-        <div class="current__cond" id="curCond">Säätiedot latautuvat&hellip;</div>
-        <div class="current__feels">Tuntuu kuin <span class="num" id="curFeels">--&deg;</span></div>
       </div>
       <div>
         <div class="current__grid">
+          <div class="stat stat--feels"><span class="stat__label">Tuntuu kuin</span><span class="stat__value num" id="curFeels2">&ndash;</span></div>
           <div class="stat"><span class="stat__label">Tuuli</span><span class="stat__value num" id="curWind">&ndash;</span></div>
           <div class="stat"><span class="stat__label">Puuskat</span><span class="stat__value num" id="curGust">&ndash;</span></div>
           <div class="stat stat--minor"><span class="stat__label">Kosteus</span><span class="stat__value num" id="curHumidity">&ndash;</span></div>
@@ -689,7 +793,7 @@
 (function(){
 
   /* ================= SETTINGS ================= */
-  var VERSION = '1.1';
+  var VERSION = '1.6';
   // Sadetutka: true = näkyy, false = pois (sähkön hinnat saavat sen tilan).
   // Kokeiluun ilman muokkausta: lisää osoitteen perään ?tutka=0
   var SHOW_RADAR = true;
@@ -1378,17 +1482,39 @@
   function fitCurrent(){
     var panel = document.querySelector('.current-panel');
     if (!panel) return;
-    panel.classList.remove('compact-1', 'compact-2', 'compact-3');
+    var LEVELS = 6, k;
+    function clearLevels(){
+      panel.classList.remove('wl');
+      for (k = 1; k <= LEVELS; k++) panel.classList.remove('wl-' + k);
+    }
+    // too tall, or something wider than its box (e.g. a long temperature next to the text)?
     function overflows(){
-      var items = panel.children, bottom = 0;
-      for (var i = 0; i < items.length; i++){
+      var items = panel.children, bottom = 0, i;
+      for (i = 0; i < items.length; i++){
         var r = items[i].getBoundingClientRect();
         if (r.height > 0) bottom = Math.max(bottom, r.bottom);
       }
-      return bottom > panel.getBoundingClientRect().bottom - 6;
+      if (bottom > panel.getBoundingClientRect().bottom - 6) return true;
+      var boxes = panel.querySelectorAll('.current__top, .current__txt, .stat');
+      for (i = 0; i < boxes.length; i++){
+        if (boxes[i].offsetParent !== null && boxes[i].scrollWidth > boxes[i].clientWidth + 1) return true;
+      }
+      return false;
     }
+    // fits as is, or once the wind direction letters are dropped (the arrow stays)?
+    function fits(){
+      panel.classList.remove('no-dir');
+      if (!overflows()) return true;
+      panel.classList.add('no-dir');
+      return !overflows();
+    }
+    clearLevels();
     dashEl.classList.remove('is-tight');
-    for (var step = 1; step <= 3 && overflows(); step++) panel.classList.add('compact-' + step);
+    // level 0 = biggest; then level by level until it fits
+    for (var level = 1; !fits() && level <= LEVELS; level++){
+      clearLevels();
+      panel.classList.add('wl', 'wl-' + level);
+    }
     // still too little room (several warnings on a short screen): slimmer forecast strips
     var elec = document.querySelector('.elec-panel');
     if (overflows() || elec.scrollHeight > elec.clientHeight + 1) dashEl.classList.add('is-tight');
@@ -1418,6 +1544,7 @@
       document.getElementById('curCond').textContent = info[1];
       document.getElementById('curTemp').innerHTML = Math.round(cur.temperature_2m) + '&deg;';
       document.getElementById('curFeels').innerHTML = Math.round(cur.apparent_temperature) + '&deg;';
+      document.getElementById('curFeels2').innerHTML = Math.round(cur.apparent_temperature) + '&deg;';
       var windHtml = withUnit(cur.wind_speed_10m, 'm/s');
       if (typeof cur.wind_direction_10m === 'number' && !isNaN(cur.wind_direction_10m)){
         var blowTo = Math.round((cur.wind_direction_10m + 180) % 360);
@@ -1696,7 +1823,8 @@
     var facts = '';
     if (best) {
       facts += '<div class="fact"><div class="fact__label">Halvin 3 h ' + dayWord(best.start.key) + '<span class="mark-best"></span></div>' +
-        '<div class="fact__value">' + blockText(best) + '<span class="fact__also">' + fmtCents(best.avg) + ' snt</span></div></div>';
+        '<div class="fact__value">' + blockText(best) + '</div>' +
+        '<div class="fact__also">keskim. <b>' + fmtCents(best.avg) + '</b> snt</div></div>';
     }
     factsEl.innerHTML = facts;
   }
